@@ -47,13 +47,13 @@ export function NowPlay() {
           <span>1:20 / 3:40</span>
           <div className="flex gap-2">
             <button className="p-2">
-              <LucidePause className="h-8 w-8" />
+              <LucidePause className="h-6 w-6" />
             </button>
             <button className="p-2">
-              <LucideTriangleRight className="h-8 w-8 hue-rotate-90 -scale-x-100" />
+              <LucideTriangleRight className="h-6 w-6 hue-rotate-90 -scale-x-100" />
             </button>
             <button className="p-2">
-              <LucideSquare className="h-8 w-8 fill-black" />
+              <LucideSquare className="h-6 w-6 fill-black" />
             </button>
           </div>
         </div>
