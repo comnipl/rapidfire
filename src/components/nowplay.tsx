@@ -68,11 +68,13 @@ export function NowPlay() {
                 <LucidePause className="h-6 w-6" />
               </button>
             */}
-            <button className="p-2">
+            <button className="p-2" onClick={() => {
+                invoke("stop_dispatched_play", { id: item.id, fade: true });
+                }}>
               <LucideTriangleRight className="h-6 w-6 hue-rotate-90 -scale-x-100" />
             </button>
             <button className="p-2" onClick={() => {
-               invoke("stop_dispatched_play", { id: item.id });
+               invoke("stop_dispatched_play", { id: item.id, fade: false });
             }}>
               <LucideSquare className="h-6 w-6 fill-black" />
             </button>

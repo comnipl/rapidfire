@@ -6,6 +6,7 @@ pub mod volume;
 
 use std::fs::File;
 use std::io::BufReader;
+use std::ops::Sub;
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -44,6 +45,7 @@ enum ProjectMessage {
     },
     StopDispatchedPlays {
         id: String,
+        fade: bool,
     },
     RefreshDispatchedPlays {
         target: DispatchedPlay,
@@ -54,7 +56,7 @@ enum ProjectMessage {
 }
 
 enum DispatchMessage {
-    Stop,
+    Stop { fade: bool },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -148,10 +150,11 @@ async fn patch_sound_volume(
 async fn stop_dispatched_play(
     state: tauri::State<'_, RapidFireState>,
     id: String,
+    fade: bool,
 ) -> Result<(), ()> {
     state
         .project_tx
-        .send(ProjectMessage::StopDispatchedPlays { id })
+        .send(ProjectMessage::StopDispatchedPlays { id, fade })
         .await
         .unwrap();
     Ok(())
@@ -376,10 +379,10 @@ async fn main() {
                     dispatched_map.retain(|(play, _)| play.id != id);
                     dispatch_refresh(event_tx.clone(), dispatched_map.clone()).await;
                 }
-                ProjectMessage::StopDispatchedPlays { id } => {
+                ProjectMessage::StopDispatchedPlays { id, fade } => {
                     if let Some(item) = dispatched_map.iter_mut().find(|(play, _)| play.id == id) {
                         item.1
-                            .send(DispatchMessage::Stop)
+                            .send(DispatchMessage::Stop { fade })
                             .await
                             .expect("failed to send stop message");
                     }
@@ -419,7 +422,13 @@ async fn dispatch_play_spawn(
                 #[allow(clippy::never_loop)]
                 while let Some(message) = receiver.blocking_recv() {
                     match message {
-                        DispatchMessage::Stop => {
+                        DispatchMessage::Stop { fade } => {
+                            if fade {
+                                for _ in 0..100 {
+                                    sink.set_volume(sink.volume().sub(0.01).max(0.0));
+                                    thread::sleep(std::time::Duration::from_millis(10));
+                                }
+                            }
                             sink.stop();
                             break;
                         }
