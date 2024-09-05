@@ -1,1 +1,1 @@
-export type AudioPlayType = "bgm" | "effect" | "voice";
+export type AudioPlayType = "bgm" | "se" | "voice";

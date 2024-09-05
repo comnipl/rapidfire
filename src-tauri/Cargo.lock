@@ -85,6 +85,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "any-lexer"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8c5d31d0f7572b6c4e9bc8430be7be02dfd196b114db010d1a60d897aab1611"
+dependencies = [
+ "text-scanner",
+]
+
+[[package]]
 name = "anyhow"
 version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -356,6 +365,12 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "char-ranges"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21eb25e26d7f0447e5334df6cd8800bb1b97512dc0b7af6867123ffe76cfebe6"
 
 [[package]]
 name = "chrono"
@@ -1089,8 +1104,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4567c8db10ae91089c99af84c68c38da3ec2f087c3f82960bcdbf3656b6f4d7"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -1566,6 +1583,15 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "jsonc-to-json"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1eeb1c47c1ee0d119db2a9bf44e3c7cc4c2671584441a14e56e87568a72215d8"
+dependencies = [
+ "any-lexer",
 ]
 
 [[package]]
@@ -2448,12 +2474,14 @@ dependencies = [
 name = "rapidfire"
 version = "0.1.0"
 dependencies = [
+ "jsonc-to-json",
  "rodio",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tokio",
+ "ulid",
  "winapi",
 ]
 
@@ -3310,6 +3338,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "text-scanner"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6aab806faa4214a5370a1d26efa1762aef0863c9cee3b187bfe4815c7db66956"
+dependencies = [
+ "char-ranges",
+]
+
+[[package]]
 name = "thin-slice"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3556,6 +3593,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
+name = "ulid"
+version = "1.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04f903f293d11f31c0c29e4148f6dc0d033a7f80cebc0282bea147611667d289"
+dependencies = [
+ "getrandom 0.2.15",
+ "rand 0.8.5",
+ "web-time",
+]
+
+[[package]]
 name = "unicode-bidi"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3747,6 +3795,16 @@ name = "web-sys"
 version = "0.3.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26fdeaafd9bd129f65e7c031593c24d62186301e0c72c8978fa1678be7d532c0"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "web-time"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
