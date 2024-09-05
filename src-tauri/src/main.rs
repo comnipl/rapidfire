@@ -6,10 +6,11 @@ pub mod volume;
 
 use std::fs::File;
 use std::io::BufReader;
-use std::thread;
-use std::time::SystemTime;
+use std::sync::Arc;
+use std::thread::{self, sleep};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use rodio::{Decoder, OutputStream, Sink};
+use rodio::{Decoder, OutputStream, Sink, Source};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use tokio::fs;
@@ -41,7 +42,12 @@ enum ProjectMessage {
         scene_id: String,
         sound_id: String,
     },
-    RefreshDispatchedPlays,
+    RefreshDispatchedPlays {
+        target: DispatchedPlay,
+    },
+    RemoveDispatchedPlay {
+        id: String,
+    },
 }
 
 enum DispatchMessage {}
@@ -50,7 +56,7 @@ enum DispatchMessage {}
 struct DispatchedPlay {
     id: String,
     sound: SoundInstance,
-    last_played_when: SystemTime,
+    last_played_when: f64,
     last_played_from: f64,
 }
 
@@ -305,16 +311,29 @@ async fn main() {
                             let dispatch = DispatchedPlay {
                                 id: Ulid::new().to_string(),
                                 sound: sound.clone(),
-                                last_played_when: SystemTime::now(),
+                                last_played_when: SystemTime::now()
+                                    .duration_since(UNIX_EPOCH)
+                                    .expect("time went backwards")
+                                    .as_secs_f64(),
                                 last_played_from: 0.0,
                             };
                             let (tx, rx) = mpsc::channel(32);
                             dispatched_map.push((dispatch.clone(), tx));
-                            dispatch_play_spawn(dispatch, rx, event_tx.clone()).await;
+                            dispatch_play_spawn(dispatch, rx, project_tx.clone()).await;
                         }
                     }
                 }
-                ProjectMessage::RefreshDispatchedPlays => {}
+                ProjectMessage::RefreshDispatchedPlays { target } => {
+                    if let Some(item) = dispatched_map
+                        .iter_mut()
+                        .find(|(play, _)| play.id == target.id)
+                    {
+                        item.0 = target;
+                    }
+                }
+                ProjectMessage::RemoveDispatchedPlay { id } => {
+                    dispatched_map.retain(|(play, _)| play.id != id);
+                }
             }
         }
 
@@ -326,16 +345,33 @@ async fn main() {
 
 async fn dispatch_play_spawn(
     play: DispatchedPlay,
-    receiver: mpsc::Receiver<DispatchMessage>,
-    event_tx: mpsc::Sender<Event>,
+    mut receiver: mpsc::Receiver<DispatchMessage>,
+    event_tx: mpsc::Sender<ProjectMessage>,
 ) {
     println!("{:?}", &play);
     thread::spawn(move || {
+        let file = BufReader::new(File::open(play.clone().sound.path).unwrap());
+        let source = Decoder::new(file).unwrap();
+
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
-        let file = BufReader::new(File::open(play.sound.path).unwrap());
-        let source = Decoder::new(file).unwrap();
-        sink.append(source);
-        sink.sleep_until_end();
+        thread::scope(|s| {
+            sink.append(source);
+            s.spawn(|| {
+                #[allow(clippy::never_loop)]
+                while let Some(message) = receiver.blocking_recv() {
+                    match message {}
+                }
+                println!("done: {:?}", play.clone());
+            });
+            s.spawn(|| {
+                sink.sleep_until_end();
+                event_tx
+                    .blocking_send(ProjectMessage::RemoveDispatchedPlay {
+                        id: play.clone().id,
+                    })
+                    .unwrap();
+            });
+        });
     });
 }
