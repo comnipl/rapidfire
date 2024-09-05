@@ -4,28 +4,68 @@
 pub mod msgbox;
 pub mod volume;
 
-use crate::msgbox::msgbox;
+use serde::Serialize;
+use tauri::Manager;
+use tokio::sync::mpsc;
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+use self::volume::volume;
+
+enum Event {
+    VolumeWarning { is_full: bool },
 }
+
+#[derive(Debug, Clone, Serialize)]
+struct VolumeWarningPayload {
+    is_full: bool,
+}
+
+#[tauri::command]
+fn get_volume_warning() -> VolumeWarningPayload {
+    VolumeWarningPayload {
+        is_full: volume().map(|v| v >= 0.995).unwrap_or(true),
+    }
+}
+
 #[tokio::main]
 async fn main() {
+    let (event_tx, mut event_rx) = mpsc::channel(32);
+
     let app = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet])
+        .setup(|app| {
+            let app_handle = app.handle();
+            tokio::spawn(async move {
+                while let Some(event) = event_rx.recv().await {
+                    match event {
+                        Event::VolumeWarning { is_full } => {
+                            app_handle
+                                .emit_all("volume_warning", VolumeWarningPayload { is_full })
+                                .expect("failed to emit event");
+                        }
+                    }
+                }
+            });
+
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![get_volume_warning])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
 
-    msgbox("Hello, World!").unwrap();
-
     if let Some(mut rx) = volume::receive_volume_change().await {
         tokio::spawn(async move {
+            let mut last_is_full = false;
             loop {
                 let volume = *rx.borrow_and_update();
-                let message = format!("Volume changed: {:?}", volume);
-                msgbox(&message).unwrap();
+                let now_is_full = volume >= 0.995;
+                if now_is_full != last_is_full {
+                    event_tx
+                        .send(Event::VolumeWarning {
+                            is_full: now_is_full,
+                        })
+                        .await
+                        .unwrap();
+                    last_is_full = now_is_full;
+                }
                 if rx.changed().await.is_err() {
                     break;
                 }
@@ -33,5 +73,5 @@ async fn main() {
         });
     }
 
-    app.run(|app_handle, _webview| {});
+    app.run(|_app_handle, _webview| {});
 }

@@ -166,7 +166,7 @@ pub async fn receive_volume_change() -> Option<tokio::sync::watch::Receiver<f64>
 }
 
 #[cfg(windows)]
-pub fn get_volume() -> f64 {
+fn get_volume() -> f64 {
     let mut current_volume: f32 = 0.0;
     unsafe {
         let hr = CoInitializeEx(ptr::null_mut(), COINIT_APARTMENTTHREADED);
@@ -200,4 +200,14 @@ pub fn get_volume() -> f64 {
         (*endpoint_volume).GetMasterVolumeLevelScalar(&mut current_volume);
     }
     current_volume.into()
+}
+
+#[cfg(windows)]
+pub fn volume() -> Option<f64> {
+    Some(get_volume())
+}
+
+#[cfg(not(windows))]
+pub fn volume() -> Option<f64> {
+    None
 }
