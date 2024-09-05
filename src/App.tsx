@@ -29,7 +29,7 @@ function App() {
   return (
     <div className="flex h-dvh flex-col">
       <Header title={prjData.title} />
-      <div className="flex-1 grid grid-cols-12 bg-lime-500">
+      <div className="flex-1 grid grid-cols-12">
         <SideBar className="col-span-2" />
         <div className="col-span-10 bg-neutral-50 grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 p-6">
           {projectData.map((item, i) => (
