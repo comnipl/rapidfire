@@ -6,9 +6,8 @@ pub mod volume;
 
 use std::fs::File;
 use std::io::BufReader;
-use std::sync::Arc;
-use std::thread::{self, sleep};
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::thread;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use rodio::{Decoder, OutputStream, Sink, Source};
 use serde::{Deserialize, Serialize};
@@ -22,6 +21,7 @@ use self::volume::volume;
 enum Event {
     VolumeWarning { is_full: bool },
     Project { project: Project },
+    Dispatches { dispatches: Vec<DispatchedPlay> },
 }
 
 enum ProjectMessage {
@@ -58,6 +58,7 @@ struct DispatchedPlay {
     sound: SoundInstance,
     last_played_when: f64,
     last_played_from: f64,
+    total_duration: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,6 +202,11 @@ async fn main() {
                                 .emit_all("project", project)
                                 .expect("failed to emit event");
                         }
+                        Event::Dispatches { dispatches } => {
+                            app_handle
+                                .emit_all("dispatches", dispatches)
+                                .expect("failed to emit event");
+                        }
                     }
                 }
             });
@@ -267,6 +273,20 @@ async fn main() {
                 .expect("failed to write project");
         };
 
+        let dispatch_refresh =
+            |event_tx: mpsc::Sender<Event>,
+             dispatched_map: Vec<(DispatchedPlay, mpsc::Sender<DispatchMessage>)>| async move {
+                event_tx
+                    .send(Event::Dispatches {
+                        dispatches: dispatched_map
+                            .iter()
+                            .map(|(play, _)| play.clone())
+                            .collect(),
+                    })
+                    .await
+                    .unwrap();
+            };
+
         while let Some(message) = project_rx.recv().await {
             match message {
                 ProjectMessage::GetProject { tx } => {
@@ -316,6 +336,7 @@ async fn main() {
                                     .expect("time went backwards")
                                     .as_secs_f64(),
                                 last_played_from: 0.0,
+                                total_duration: 0.0,
                             };
                             let (tx, rx) = mpsc::channel(32);
                             dispatched_map.push((dispatch.clone(), tx));
@@ -330,9 +351,11 @@ async fn main() {
                     {
                         item.0 = target;
                     }
+                    dispatch_refresh(event_tx.clone(), dispatched_map.clone()).await;
                 }
                 ProjectMessage::RemoveDispatchedPlay { id } => {
                     dispatched_map.retain(|(play, _)| play.id != id);
+                    dispatch_refresh(event_tx.clone(), dispatched_map.clone()).await;
                 }
             }
         }
@@ -344,17 +367,24 @@ async fn main() {
 }
 
 async fn dispatch_play_spawn(
-    play: DispatchedPlay,
+    mut play: DispatchedPlay,
     mut receiver: mpsc::Receiver<DispatchMessage>,
     event_tx: mpsc::Sender<ProjectMessage>,
 ) {
-    println!("{:?}", &play);
     thread::spawn(move || {
         let file = BufReader::new(File::open(play.clone().sound.path).unwrap());
         let source = Decoder::new(file).unwrap();
 
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
+        if let Some(duration) = source.total_duration() {
+            play.total_duration = duration.as_secs_f64();
+            event_tx
+                .blocking_send(ProjectMessage::RefreshDispatchedPlays {
+                    target: play.clone(),
+                })
+                .unwrap();
+        }
         thread::scope(|s| {
             sink.append(source);
             s.spawn(|| {
@@ -362,7 +392,6 @@ async fn dispatch_play_spawn(
                 while let Some(message) = receiver.blocking_recv() {
                     match message {}
                 }
-                println!("done: {:?}", play.clone());
             });
             s.spawn(|| {
                 sink.sleep_until_end();

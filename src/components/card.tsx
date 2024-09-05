@@ -31,6 +31,7 @@ export function Card({
 }: CardType) {
   return (
     <div className="p-4 h-fit gap-4 border-2 border-neutral-200 flex flex-col justify-between hover:bg-neutral-100" onClick={() => {
+      if (isEditorMode) return;
       invoke("dispatch_play", {
           sceneId: sceneId,
           soundId: id,

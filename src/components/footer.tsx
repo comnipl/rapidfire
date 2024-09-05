@@ -22,7 +22,7 @@ export function Footer({ currentMode, setEditorMode, version }: FooterType) {
         ) : (
           <LucideMusic className="h-4 w-4" />
         )}
-        {currentMode ? "編集モード" : "再生専用モード"}
+        {currentMode ? "編集モード" : "再生モード"}
       </button>
       <h2 className="font-semibold">Rapidfire {version}</h2>
     </footer>
