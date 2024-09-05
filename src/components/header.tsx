@@ -5,7 +5,7 @@ type HeaderProps = {
 }
 export function Header({title}: HeaderProps) {
   return (
-    <header className="flex justify-between w-full py-4 px-8 items-center">
+    <header className="flex justify-between h-fit w-full py-4 px-8 items-center">
         <h1 className="text-3xl font-bold">{title}</h1>
         <div className="flex gap-4">
         <div className="bg-yellow-200 p-6 text-2xl font-bold">
