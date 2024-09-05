@@ -71,6 +71,8 @@ function App() {
         <div className="col-span-10 bg-neutral-50 grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 p-6">
           {sounds.map(s => (
             <Card
+              id={s.id}
+              sceneId={selectedSceneId!}
               key={s.id}
               title={s.display_name}
               type={s.variant}

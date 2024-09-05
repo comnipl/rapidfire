@@ -4,10 +4,13 @@ import { getAccentColor, getAudioTypeIcon } from "@/lib/colortype";
 import { AudioPlayType } from "@/lib/type";
 import { LucideRepeat } from "lucide-react";
 import { Dispatch, SetStateAction } from "react";
+import { invoke } from "@tauri-apps/api";
 
 export type CardType = {
+  id: string;
   type: AudioPlayType;
   title: string;
+  sceneId: string;
   isEditorMode: boolean;
   isRepeat: boolean;
   setIsRepeat: Dispatch<SetStateAction<boolean>>;
@@ -16,16 +19,23 @@ export type CardType = {
 };
 
 export function Card({
+  id,
   title,
   type,
   isEditorMode,
   isRepeat,
   setIsRepeat,
+  sceneId,
   volume,
   setVolume,
 }: CardType) {
   return (
-    <div className="p-4 h-fit gap-4 border-2 border-neutral-200 flex flex-col justify-between hover:bg-neutral-100">
+    <div className="p-4 h-fit gap-4 border-2 border-neutral-200 flex flex-col justify-between hover:bg-neutral-100" onClick={() => {
+      invoke("dispatch_play", {
+          sceneId: sceneId,
+          soundId: id,
+      });
+    }}>
       <h2 className="text-xl font-semibold text-center">{title}</h2>
       <div className="mx-auto w-fit p-4 bg-slate-300 rounded-full">
         {getAudioTypeIcon({ type, className: "h-6 w-6" })}

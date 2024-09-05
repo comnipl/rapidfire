@@ -4,10 +4,17 @@
 pub mod msgbox;
 pub mod volume;
 
+use std::fs::File;
+use std::io::BufReader;
+use std::thread;
+use std::time::SystemTime;
+
+use rodio::{Decoder, OutputStream, Sink};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use tokio::fs;
 use tokio::sync::{mpsc, oneshot};
+use ulid::Ulid;
 
 use self::volume::volume;
 
@@ -30,6 +37,21 @@ enum ProjectMessage {
         sound_id: String,
         looped: bool,
     },
+    DispatchPlay {
+        scene_id: String,
+        sound_id: String,
+    },
+    RefreshDispatchedPlays,
+}
+
+enum DispatchMessage {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DispatchedPlay {
+    id: String,
+    sound: SoundInstance,
+    last_played_when: SystemTime,
+    last_played_from: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -128,6 +150,20 @@ async fn patch_sound_looped(
 }
 
 #[tauri::command]
+async fn dispatch_play(
+    state: tauri::State<'_, RapidFireState>,
+    scene_id: String,
+    sound_id: String,
+) -> Result<(), ()> {
+    state
+        .project_tx
+        .send(ProjectMessage::DispatchPlay { scene_id, sound_id })
+        .await
+        .unwrap();
+    Ok(())
+}
+
+#[tauri::command]
 async fn get_project(state: tauri::State<'_, RapidFireState>) -> Result<Project, ()> {
     let (tx, rx) = oneshot::channel();
     state
@@ -172,7 +208,8 @@ async fn main() {
             get_volume_warning,
             get_project,
             patch_sound_volume,
-            patch_sound_looped
+            patch_sound_looped,
+            dispatch_play
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -207,6 +244,8 @@ async fn main() {
             .expect("failed to read project");
         let mut project =
             serde_json::from_str::<Project>(&project).expect("failed to parse project");
+
+        let mut dispatched_map: Vec<(DispatchedPlay, mpsc::Sender<DispatchMessage>)> = vec![];
 
         let update = |event_tx: mpsc::Sender<Event>, project: Project| async move {
             event_tx
@@ -259,6 +298,23 @@ async fn main() {
                     }
                     update(event_tx.clone(), project.clone()).await;
                 }
+                ProjectMessage::DispatchPlay { scene_id, sound_id } => {
+                    if let Some(scene) = project.scenes.iter().find(|scene| scene.id == scene_id) {
+                        if let Some(sound) = scene.sounds.iter().find(|sound| sound.id == sound_id)
+                        {
+                            let dispatch = DispatchedPlay {
+                                id: Ulid::new().to_string(),
+                                sound: sound.clone(),
+                                last_played_when: SystemTime::now(),
+                                last_played_from: 0.0,
+                            };
+                            let (tx, rx) = mpsc::channel(32);
+                            dispatched_map.push((dispatch.clone(), tx));
+                            dispatch_play_spawn(dispatch, rx, event_tx.clone()).await;
+                        }
+                    }
+                }
+                ProjectMessage::RefreshDispatchedPlays => {}
             }
         }
 
@@ -266,4 +322,20 @@ async fn main() {
     });
 
     app.run(|_app_handle, _webview| {});
+}
+
+async fn dispatch_play_spawn(
+    play: DispatchedPlay,
+    receiver: mpsc::Receiver<DispatchMessage>,
+    event_tx: mpsc::Sender<Event>,
+) {
+    println!("{:?}", &play);
+    thread::spawn(move || {
+        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+        let sink = Sink::try_new(&stream_handle).unwrap();
+        let file = BufReader::new(File::open(play.sound.path).unwrap());
+        let source = Decoder::new(file).unwrap();
+        sink.append(source);
+        sink.sleep_until_end();
+    });
 }
