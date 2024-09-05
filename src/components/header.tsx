@@ -41,7 +41,9 @@ export function Header({ title }: HeaderProps) {
         >
           音量が100%ではありません
         </div>
-        <button className="aspect-square p-4 bg-red-700">
+        <button className="aspect-square p-4 bg-red-700" onClick={() => {
+          invoke("panic_button");
+        }}>
           <LucideCircleOff className="text-white h-6 w-6" />
         </button>
       </div>

@@ -53,6 +53,7 @@ enum ProjectMessage {
     RemoveDispatchedPlay {
         id: String,
     },
+    PanicButton,
 }
 
 enum DispatchMessage {
@@ -192,6 +193,16 @@ async fn dispatch_play(
 }
 
 #[tauri::command]
+async fn panic_button(state: tauri::State<'_, RapidFireState>) -> Result<(), ()> {
+    state
+        .project_tx
+        .send(ProjectMessage::PanicButton)
+        .await
+        .unwrap();
+    Ok(())
+}
+
+#[tauri::command]
 async fn get_project(state: tauri::State<'_, RapidFireState>) -> Result<Project, ()> {
     let (tx, rx) = oneshot::channel();
     state
@@ -243,7 +254,8 @@ async fn main() {
             patch_sound_volume,
             patch_sound_looped,
             dispatch_play,
-            stop_dispatched_play
+            stop_dispatched_play,
+            panic_button
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -386,6 +398,15 @@ async fn main() {
                             .await
                             .expect("failed to send stop message");
                     }
+                }
+                ProjectMessage::PanicButton => {
+                    for (_, tx) in dispatched_map.iter() {
+                        tx.send(DispatchMessage::Stop { fade: false })
+                            .await
+                            .expect("failed to send stop message");
+                    }
+                    dispatched_map.clear();
+                    dispatch_refresh(event_tx.clone(), dispatched_map.clone()).await;
                 }
             }
         }
