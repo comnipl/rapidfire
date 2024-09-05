@@ -5,7 +5,7 @@ export const getBackgroundColor = (type: AudioPlayType) => {
   switch (type) {
     case "bgm":
       return "bg-blue-50";
-    case "effect":
+    case "se":
       return "bg-yellow-50";
     case "voice":
       return "bg-red-50";
@@ -16,7 +16,7 @@ export const getAccentColor = (type: AudioPlayType) => {
   switch (type) {
     case "bgm":
       return "bg-blue-400";
-    case "effect":
+    case "se":
       return "bg-yellow-400";
     case "voice":
       return "bg-red-400";
@@ -31,7 +31,7 @@ export const getAudioTypeIcon = ({ type, className }: GetAudioTypeIcon) => {
   switch (type) {
     case "bgm":
       return <LucideMusic className={className} />;
-    case "effect":
+    case "se":
       return <LucideSparkles className={className} />;
     case "voice":
       return <LucideMicVocal className={className} />;

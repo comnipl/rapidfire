@@ -12,7 +12,7 @@ export type CardType = {
   isRepeat: boolean;
   setIsRepeat: Dispatch<SetStateAction<boolean>>;
   volume: number;
-  setVolume: Dispatch<SetStateAction<number>>;
+  setVolume: (value: number) => void;
 };
 
 export function Card({

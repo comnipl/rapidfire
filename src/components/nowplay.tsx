@@ -19,7 +19,7 @@ const nowPlay: NowPlayType[] = [
   },
   {
     title: "Rapidfire Effect",
-    type: "effect",
+    type: "se",
   },
   {
     title: "Rapidfire Voice",
