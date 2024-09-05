@@ -11,6 +11,7 @@
     "cross-compile:windows": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc"
   },
   "dependencies": {
+    "@radix-ui/react-slider": "^1.2.0",
     "@tauri-apps/api": "^1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
