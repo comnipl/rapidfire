@@ -10,7 +10,7 @@ export function SideBar({ className }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn("w-full h-full px-4 flex flex-col gap-4", className)}>
       {schene.map((item, i) => (
-        <button className="w-full h-16 bg-gray-100 text-2xl font-bold" key={i}>
+        <button className="w-full py-3 bg-gray-100 text-2xl font-bold" key={i}>
           {item.title}
         </button>
       ))}
