@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { invoke } from "@tauri-apps/api";
 import { LucideMusic, LucidePen } from "lucide-react";
 import { Dispatch, SetStateAction } from "react";
 
@@ -15,7 +16,10 @@ export function Footer({ currentMode, setEditorMode, version }: FooterType) {
           "py-2 px-4 font-semibold flex items-center gap-4 border-2",
           currentMode && "bg-red-50 border-red-500"
         )}
-        onClick={() => setEditorMode(!currentMode)}
+        onClick={() => {
+          invoke("save");
+          setEditorMode(!currentMode);
+        }}
       >
         {currentMode ? (
           <LucidePen className="h-4 w-4" />
