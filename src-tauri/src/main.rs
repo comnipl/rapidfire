@@ -7,7 +7,7 @@ pub mod volume;
 use std::fs::File;
 use std::io::BufReader;
 use std::ops::Sub;
-use std::thread;
+use std::thread::{self, sleep};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rodio::{Decoder, OutputStream, Sink, Source};
@@ -457,10 +457,34 @@ async fn dispatch_play_spawn(
                 }
             });
             s.spawn(|| {
-                sink.sleep_until_end();
+                loop {
+                    sink.sleep_until_end();
+                    if sink.empty() {
+                        break;
+                    }
+                }
                 let _ = event_tx.blocking_send(ProjectMessage::RemoveDispatchedPlay {
                     id: play.clone().id,
                 });
+            });
+            s.spawn(|| loop {
+                let file = BufReader::new(File::open(play.clone().sound.path).unwrap());
+                let source = Decoder::new(file).unwrap();
+                sleep(source.total_duration().unwrap() / 2);
+                if 5 > sink.len() && sink.len() > 0 && play.sound.looped {
+                    sink.append(source);
+                    let mut new_play = play.clone();
+                    new_play.last_played_from = 0.0;
+                    new_play.last_played_when = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .expect("time went backwards")
+                        .as_secs_f64();
+                    event_tx
+                        .blocking_send(ProjectMessage::RefreshDispatchedPlays { target: new_play })
+                        .unwrap();
+                } else {
+                    break;
+                }
             });
         });
     });
