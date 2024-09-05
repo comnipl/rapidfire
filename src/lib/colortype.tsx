@@ -4,11 +4,11 @@ import { AudioPlayType } from "./type";
 export const getBackgroundColor = (type: AudioPlayType) => {
   switch (type) {
     case "bgm":
-      return "bg-blue-100";
+      return "bg-blue-50";
     case "effect":
-      return "bg-yellow-100";
+      return "bg-yellow-50";
     case "voice":
-      return "bg-red-100";
+      return "bg-red-50";
   }
 };
 

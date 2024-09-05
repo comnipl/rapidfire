@@ -40,19 +40,19 @@ export function NowPlay() {
           <div>
             {getAudioTypeIcon({ type: item.type, className: "h-6 w-6" })}
           </div>
-          <span className="text-xl w-72 bg-white/80">{item.title}</span>
+          <span className="text-xl w-72">{item.title}</span>
           <div className="flex-1 w-full">
             <Slider className={cn("text-black", getAccentColor(item.type))} />
           </div>
           <span>1:20 / 3:40</span>
           <div className="flex gap-2">
-            <button className="p-2 bg-white/80">
+            <button className="p-2">
               <LucidePause className="h-8 w-8" />
             </button>
-            <button className="p-2 bg-white/80">
+            <button className="p-2">
               <LucideTriangleRight className="h-8 w-8 hue-rotate-90 -scale-x-100" />
             </button>
-            <button className="p-2 bg-white/80">
+            <button className="p-2">
               <LucideSquare className="h-8 w-8 fill-black" />
             </button>
           </div>
