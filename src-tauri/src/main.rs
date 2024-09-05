@@ -1,17 +1,10 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+pub mod msgbox;
 pub mod volume;
 
-use std::fs::File;
-use std::io::BufReader;
-use std::ops::Sub;
-use tauri::api::dialog::blocking::message;
-
-use rodio::{Decoder, OutputStream, Sink, Source};
-use tauri::{Manager, RunEvent};
-
-use self::volume::print_message;
+use crate::msgbox::msgbox;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -20,19 +13,25 @@ fn greet(name: &str) -> String {
 }
 #[tokio::main]
 async fn main() {
-    let mut app = tauri::Builder::default()
+    let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![greet])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
 
-    print_message("Hello, World!").unwrap();
+    msgbox("Hello, World!").unwrap();
 
-    let volume = volume::get_volume();
-    let volume = format!("{:?}", volume);
+    if let Some(mut rx) = volume::receive_volume_change().await {
+        tokio::spawn(async move {
+            loop {
+                let volume = *rx.borrow_and_update();
+                let message = format!("Volume changed: {:?}", volume);
+                msgbox(&message).unwrap();
+                if rx.changed().await.is_err() {
+                    break;
+                }
+            }
+        });
+    }
 
-    print_message(&volume).unwrap();
-
-    app.run(|app_handle, e| match e {
-        _ => {}
-    })
+    app.run(|app_handle, _webview| {});
 }
