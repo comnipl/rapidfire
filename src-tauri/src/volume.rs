@@ -38,12 +38,12 @@ use winapi::Class;
 struct AudioEndpointVolumeCallback {
     vtable: *const IAudioEndpointVolumeCallbackVtbl,
     ref_count: ULONG,
-    tx: watch::Sender<Option<f64>>,
+    tx: watch::Sender<f64>,
 }
 
 #[cfg(windows)]
 impl AudioEndpointVolumeCallback {
-    pub fn new(tx: watch::Sender<Option<f64>>) -> Self {
+    pub fn new(tx: watch::Sender<f64>) -> Self {
         AudioEndpointVolumeCallback {
             vtable: &AUDIO_ENDPOINT_VOLUME_CALLBACK_VTBL,
             ref_count: 1,
@@ -95,7 +95,7 @@ extern "system" fn OnNotify(
     unsafe {
         if let Some(data) = p_notify.as_ref() {
             let callback = &*(this as *mut AudioEndpointVolumeCallback);
-            let _ = callback.tx.send(Some(data.fMasterVolume as f64));
+            let _ = callback.tx.send(data.fMasterVolume as f64);
         }
         S_OK
     }
@@ -113,7 +113,7 @@ const AUDIO_ENDPOINT_VOLUME_CALLBACK_VTBL: IAudioEndpointVolumeCallbackVtbl =
     };
 
 #[cfg(windows)]
-pub async fn receive_volume_change() -> Option<watch::Receiver<Option<f64>>> {
+pub async fn receive_volume_change() -> Option<watch::Receiver<f64>> {
     unsafe {
         let hr = CoInitializeEx(ptr::null_mut(), COINIT_APARTMENTTHREADED);
         if hr != S_OK && hr != S_FALSE {
@@ -145,7 +145,7 @@ pub async fn receive_volume_change() -> Option<watch::Receiver<Option<f64>>> {
             &mut endpoint_volume as *mut _ as *mut *mut c_void,
         );
 
-        let (tx, rx) = watch::channel(None);
+        let (tx, rx) = watch::channel(get_volume());
         let callback = Box::new(AudioEndpointVolumeCallback::new(tx));
         let callback_ptr = Box::into_raw(callback);
 
@@ -161,6 +161,43 @@ pub async fn receive_volume_change() -> Option<watch::Receiver<Option<f64>>> {
 }
 
 #[cfg(not(windows))]
-pub async fn receive_volume_change() -> Option<tokio::sync::watch::Receiver<Option<f64>>> {
+pub async fn receive_volume_change() -> Option<tokio::sync::watch::Receiver<f64>> {
     None
+}
+
+#[cfg(windows)]
+pub fn get_volume() -> f64 {
+    let mut current_volume: f32 = 0.0;
+    unsafe {
+        let hr = CoInitializeEx(ptr::null_mut(), COINIT_APARTMENTTHREADED);
+        if hr != S_OK && hr != S_FALSE {
+            panic!("COM initialization failed: 0x{:08x}", hr);
+        }
+
+        let mut device_enumerator: *mut IMMDeviceEnumerator = ptr::null_mut();
+        let hr = CoCreateInstance(
+            &MMDeviceEnumerator::uuidof(),
+            ptr::null_mut(),
+            CLSCTX_ALL,
+            &IMMDeviceEnumerator::uuidof(),
+            &mut device_enumerator as *mut _ as *mut *mut c_void,
+        );
+        if hr != S_OK {
+            panic!("Failed to create device enumerator: 0x{:08x}", hr);
+        }
+
+        let mut default_device: *mut IMMDevice = ptr::null_mut();
+        (*device_enumerator).GetDefaultAudioEndpoint(eRender, eConsole, &mut default_device);
+
+        let mut endpoint_volume: *mut IAudioEndpointVolume = ptr::null_mut();
+        (*default_device).Activate(
+            &IAudioEndpointVolume::uuidof(),
+            CLSCTX_ALL,
+            ptr::null_mut(),
+            &mut endpoint_volume as *mut _ as *mut *mut c_void,
+        );
+
+        (*endpoint_volume).GetMasterVolumeLevelScalar(&mut current_volume);
+    }
+    current_volume.into()
 }
