@@ -1,5 +1,6 @@
 import "./App.css";
 import { Header } from "./components/header";
+import { NowPlay } from "./components/nowplay";
 import { SideBar } from "./components/sidebar";
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
       <div className="flex-1 grid grid-cols-12 bg-black">
         <SideBar className="col-span-2" />
       </div>
+      <NowPlay />
     </div>
   );
 }
