@@ -8,7 +8,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::ops::Sub;
 use std::thread::{self, sleep};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use rodio::{Decoder, OutputStream, Sink, Source};
 use serde::{Deserialize, Serialize};
@@ -26,6 +26,7 @@ enum Event {
 }
 
 enum ProjectMessage {
+    Save,
     GetProject {
         tx: oneshot::Sender<Project>,
     },
@@ -121,6 +122,12 @@ struct SoundScene {
 struct Project {
     display_name: String,
     scenes: Vec<SoundScene>,
+}
+
+#[tauri::command]
+async fn save(state: tauri::State<'_, RapidFireState>) -> Result<(), ()> {
+    state.project_tx.send(ProjectMessage::Save).await.unwrap();
+    Ok(())
 }
 
 #[tauri::command]
@@ -255,7 +262,8 @@ async fn main() {
             patch_sound_looped,
             dispatch_play,
             stop_dispatched_play,
-            panic_button
+            panic_button,
+            save
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -301,10 +309,6 @@ async fn main() {
                 })
                 .await
                 .expect("failed to send project refresh");
-            let text = serde_json::to_string_pretty(&project).expect("failed to serialize project");
-            fs::write("projects/index.json", text)
-                .await
-                .expect("failed to write project");
         };
 
         let dispatch_refresh =
@@ -323,6 +327,13 @@ async fn main() {
 
         while let Some(message) = project_rx.recv().await {
             match message {
+                ProjectMessage::Save => {
+                    let text = serde_json::to_string_pretty(&project)
+                        .expect("failed to serialize project");
+                    fs::write("projects/index.json", text)
+                        .await
+                        .expect("failed to write project");
+                }
                 ProjectMessage::GetProject { tx } => {
                     tx.send(project.clone()).unwrap();
                 }
@@ -428,14 +439,15 @@ async fn dispatch_play_spawn(
 
         let (_stream, stream_handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&stream_handle).unwrap();
-        if let Some(duration) = source.total_duration() {
-            play.total_duration = duration.as_secs_f64();
-            event_tx
-                .blocking_send(ProjectMessage::RefreshDispatchedPlays {
-                    target: play.clone(),
-                })
-                .unwrap();
-        }
+        play.total_duration = source
+            .total_duration()
+            .map(|d| d.as_secs_f64())
+            .unwrap_or(0.0);
+        event_tx
+            .blocking_send(ProjectMessage::RefreshDispatchedPlays {
+                target: play.clone(),
+            })
+            .unwrap();
         thread::scope(|s| {
             sink.append(source);
             sink.set_volume(play.sound.volume as f32 / 100.0);
@@ -470,7 +482,7 @@ async fn dispatch_play_spawn(
             s.spawn(|| loop {
                 let file = BufReader::new(File::open(play.clone().sound.path).unwrap());
                 let source = Decoder::new(file).unwrap();
-                sleep(source.total_duration().unwrap() / 2);
+                sleep(source.total_duration().unwrap_or(Duration::from_secs(1)) / 2);
                 if 5 > sink.len() && sink.len() > 0 && play.sound.looped {
                     sink.append(source);
                     let mut new_play = play.clone();
