@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { LucidePause, LucideSquare, LucideTriangleRight } from "lucide-react";
+import { LucideSquare, LucideTriangleRight } from "lucide-react";
 import { Slider } from "./ui/slider";
 import {
   getAccentColor,
@@ -9,6 +9,7 @@ import {
 import { SoundInstance } from "@/App";
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api";
 
 type DispatchedPlay = {
   id: string;
@@ -62,13 +63,17 @@ export function NowPlay() {
           </div>
           <span>{formatTime(passed - item.last_played_when)} / {formatTime(item.total_duration)}</span>
           <div className="flex gap-2">
-            <button className="p-2">
-              <LucidePause className="h-6 w-6" />
-            </button>
+            {/*
+              <button className="p-2">
+                <LucidePause className="h-6 w-6" />
+              </button>
+            */}
             <button className="p-2">
               <LucideTriangleRight className="h-6 w-6 hue-rotate-90 -scale-x-100" />
             </button>
-            <button className="p-2">
+            <button className="p-2" onClick={() => {
+               invoke("stop_dispatched_play", { id: item.id });
+            }}>
               <LucideSquare className="h-6 w-6 fill-black" />
             </button>
           </div>

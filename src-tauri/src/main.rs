@@ -42,6 +42,9 @@ enum ProjectMessage {
         scene_id: String,
         sound_id: String,
     },
+    StopDispatchedPlays {
+        id: String,
+    },
     RefreshDispatchedPlays {
         target: DispatchedPlay,
     },
@@ -50,7 +53,9 @@ enum ProjectMessage {
     },
 }
 
-enum DispatchMessage {}
+enum DispatchMessage {
+    Stop,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct DispatchedPlay {
@@ -140,6 +145,19 @@ async fn patch_sound_volume(
 }
 
 #[tauri::command]
+async fn stop_dispatched_play(
+    state: tauri::State<'_, RapidFireState>,
+    id: String,
+) -> Result<(), ()> {
+    state
+        .project_tx
+        .send(ProjectMessage::StopDispatchedPlays { id })
+        .await
+        .unwrap();
+    Ok(())
+}
+
+#[tauri::command]
 async fn patch_sound_looped(
     state: tauri::State<'_, RapidFireState>,
     payload: PatchSoundLooped,
@@ -221,7 +239,8 @@ async fn main() {
             get_project,
             patch_sound_volume,
             patch_sound_looped,
-            dispatch_play
+            dispatch_play,
+            stop_dispatched_play
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -357,6 +376,14 @@ async fn main() {
                     dispatched_map.retain(|(play, _)| play.id != id);
                     dispatch_refresh(event_tx.clone(), dispatched_map.clone()).await;
                 }
+                ProjectMessage::StopDispatchedPlays { id } => {
+                    if let Some(item) = dispatched_map.iter_mut().find(|(play, _)| play.id == id) {
+                        item.1
+                            .send(DispatchMessage::Stop)
+                            .await
+                            .expect("failed to send stop message");
+                    }
+                }
             }
         }
 
@@ -387,19 +414,23 @@ async fn dispatch_play_spawn(
         }
         thread::scope(|s| {
             sink.append(source);
+            sink.set_volume(play.sound.volume as f32 / 100.0);
             s.spawn(|| {
                 #[allow(clippy::never_loop)]
                 while let Some(message) = receiver.blocking_recv() {
-                    match message {}
+                    match message {
+                        DispatchMessage::Stop => {
+                            sink.stop();
+                            break;
+                        }
+                    }
                 }
             });
             s.spawn(|| {
                 sink.sleep_until_end();
-                event_tx
-                    .blocking_send(ProjectMessage::RemoveDispatchedPlay {
-                        id: play.clone().id,
-                    })
-                    .unwrap();
+                let _ = event_tx.blocking_send(ProjectMessage::RemoveDispatchedPlay {
+                    id: play.clone().id,
+                });
             });
         });
     });
