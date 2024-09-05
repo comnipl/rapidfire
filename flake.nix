@@ -24,10 +24,9 @@
               darwin.apple_sdk.frameworks.AppKit
               darwin.apple_sdk.frameworks.WebKit
               darwin.apple_sdk.frameworks.Cocoa
-              minio-client
-              python312Packages.boto3
               rustup
               libsndfile
+              cargo-xwin
             ];
             shellHook = ''
               exec $SHELL
