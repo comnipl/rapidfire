@@ -1,15 +1,13 @@
 import { cn } from "@/lib/utils";
-import {
-  LucideMicVocal,
-  LucideMusic,
-  LucidePause,
-  LucideSparkles,
-  LucideSquare,
-  LucideTriangleRight,
-} from "lucide-react";
+import { LucidePause, LucideSquare, LucideTriangleRight } from "lucide-react";
 import { Slider } from "./ui/slider";
+import {
+  getAccentColor,
+  getAudioTypeIcon,
+  getBackgroundColor,
+} from "@/lib/colortype";
+import { AudioPlayType } from "@/lib/type";
 
-type AudioPlayType = "bgm" | "effect" | "voice";
 type NowPlayType = {
   title: string;
   type: AudioPlayType;
@@ -35,27 +33,16 @@ export function NowPlay() {
         <div
           className={cn(
             "px-4 py-2 font-semibold flex items-center gap-6",
-            item.type === "bgm" && "bg-blue-100",
-            item.type === "effect" && "bg-yellow-100",
-            item.type === "voice" && "bg-red-100"
+            getBackgroundColor(item.type)
           )}
           key={i}
         >
           <div>
-            {item.type === "bgm" && <LucideMusic className="h-6 w-6" />}
-            {item.type === "effect" && <LucideSparkles className="h-6 w-6" />}
-            {item.type === "voice" && <LucideMicVocal className="h-6 w-6" />}
+            {getAudioTypeIcon({ type: item.type, className: "h-6 w-6" })}
           </div>
           <span className="text-xl w-72 bg-white/80">{item.title}</span>
           <div className="flex-1 w-full">
-            <Slider
-              className={cn(
-                "text-black",
-                item.type === "bgm" && "bg-blue-400",
-                item.type === "effect" && "bg-yellow-400",
-                item.type === "voice" && "bg-red-400"
-              )}
-            />
+            <Slider className={cn("text-black", getAccentColor(item.type))} />
           </div>
           <span>1:20 / 3:40</span>
           <div className="flex gap-2">
