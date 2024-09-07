@@ -59,11 +59,13 @@ enum ProjectMessage {
 
 enum DispatchMessage {
     Stop { fade: bool },
+    VolumeChange { volume: f32 },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct DispatchedPlay {
     id: String,
+    scene_id: String,
     sound: SoundInstance,
     last_played_when: f64,
     last_played_from: f64,
@@ -351,6 +353,18 @@ async fn main() {
                             sound.volume = volume;
                         }
                     }
+
+                    for (_, tx) in dispatched_map
+                        .iter()
+                        .filter(|(play, _)| play.sound.id == sound_id && play.scene_id == scene_id)
+                    {
+                        tx.send(DispatchMessage::VolumeChange {
+                            volume: volume as f32 / 100.0,
+                        })
+                        .await
+                        .unwrap();
+                    }
+
                     update(event_tx.clone(), project.clone()).await;
                 }
                 ProjectMessage::PatchSoundLooped {
@@ -375,6 +389,7 @@ async fn main() {
                         {
                             let dispatch = DispatchedPlay {
                                 id: Ulid::new().to_string(),
+                                scene_id: scene_id.clone(),
                                 sound: sound.clone(),
                                 last_played_when: SystemTime::now()
                                     .duration_since(UNIX_EPOCH)
@@ -455,6 +470,9 @@ async fn dispatch_play_spawn(
                 #[allow(clippy::never_loop)]
                 while let Some(message) = receiver.blocking_recv() {
                     match message {
+                        DispatchMessage::VolumeChange { volume } => {
+                            sink.set_volume(volume);
+                        }
                         DispatchMessage::Stop { fade } => {
                             if fade {
                                 for _ in 0..100 {
