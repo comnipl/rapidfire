@@ -9,7 +9,7 @@ export function SideBar({ className, scenes, sceneId, setSceneId }: {
   return (
     <div className={cn("w-full h-full px-4 flex flex-col gap-4", className)}>
       {scenes.map(item => (
-        <button className={cn("w-full py-3 bg-gray-100 text-2xl font-bold", sceneId === item.id && 'bg-blue-300')} key={item.id} onClick={() => setSceneId(item.id)}>
+        <button className={cn("w-full py-3 bg-gray-100 text-xl font-bold", sceneId === item.id && 'bg-blue-300')} key={item.id} onClick={() => setSceneId(item.id)}>
           {item.display_name}
         </button>
       ))}
