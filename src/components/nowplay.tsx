@@ -57,7 +57,7 @@ export function NowPlay() {
           </div>
           <span className="text-xl w-72">{item.sound.display_name}</span>
           <div className="flex-1 w-full">
-            <Slider className={cn("text-black", getAccentColor(item.sound.variant))} disabled value={[
+            <Slider accent={getAccentColor(item.sound.variant)} thumb={false} disabled value={[
               ((passed - item.last_played_when) / item.total_duration) * 100
             ]} />
           </div>
