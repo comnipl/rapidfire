@@ -2581,16 +2581,14 @@ dependencies = [
 
 [[package]]
 name = "rodio"
-version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6006a627c1a38d37f3d3a85c6575418cfe34a5392d60a686d0071e1c8d427acb"
+version = "0.17.2"
+source = "git+https://github.com/PetrGlad/rodio?branch=configurable-buffer-size#08207b1acafee65f90f7c94cfe5942b3a04c3b1b"
 dependencies = [
  "claxon",
  "cpal",
  "hound",
  "lewton",
  "symphonia",
- "thiserror",
 ]
 
 [[package]]
