@@ -386,6 +386,14 @@ async fn main() {
                     update(event_tx.clone(), project.clone()).await;
                 }
                 ProjectMessage::DispatchPlay { scene_id, sound_id } => {
+                    if dispatched_map
+                        .iter()
+                        .any(|(play, _)| play.sound.id == sound_id && play.scene_id == scene_id)
+                    {
+                        // Sound is already playing, do not dispatch again
+                        continue;
+                    }
+
                     if let Some(scene) = project.scenes.iter().find(|scene| scene.id == scene_id) {
                         if let Some(sound) = scene.sounds.iter().find(|sound| sound.id == sound_id)
                         {
