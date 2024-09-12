@@ -78,10 +78,13 @@ jobs:
           artifact_paths='${{ steps.tauri_build.outputs.artifactPaths }}'
           paths=$(echo "${artifact_paths}" | jq -r '.[]')
           echo "${paths}"
-          echo "${paths}" > paths.txt
+          echo "paths<<EOF" >> $GITHUB_OUTPUT
+          echo "${paths}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.platform }} 
-          path: $(cat paths.txt)
+          path: ${{ steps.parse_paths.outputs.paths }}
