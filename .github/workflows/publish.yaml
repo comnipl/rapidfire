@@ -69,6 +69,9 @@ jobs:
         with:
           args: ${{ matrix.args }}
 
+      - name: Check files
+        run: ls -l ${{ join(steps.tauri_build.outputs.artifactPaths, ' ') }}
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
