@@ -109,3 +109,10 @@ jobs:
         with:
           name: build-${{ matrix.platform }} 
           path: ${{ steps.parse_paths_windows.outputs.paths }}
+
+      - name: Upload portable artifact
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: portable-build-${{ matrix.platform }}
+          path: src-tauri/target/release/rapidfire.exe
