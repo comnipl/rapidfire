@@ -91,9 +91,9 @@ jobs:
           $artifactPaths = '${{ steps.tauri_build.outputs.artifactPaths }}'
           $paths = $artifactPaths | ConvertFrom-Json
           $paths -join "`n"
-          "paths<<EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          $paths | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "paths<<EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+          $paths | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+          "EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
         shell: pwsh
 
       - name: Upload artifact
