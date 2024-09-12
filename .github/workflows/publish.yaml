@@ -11,21 +11,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest' # for Arm based macs (M1 and above).
+          - runner: 'macos-latest'
             args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest' # for Intel based macs.
-            args: '--target x86_64-apple-darwin'
-          - platform: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
+            platform: 'macos-aarch64'
+          - runner: 'windows-8core'
             args: ''
-          - platform: 'windows-latest'
-            args: ''
+            platform: 'windows'
 
-    runs-on: ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
       - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
+        if: matrix.platform == 'ubuntu' # This must match the platform value defined above.
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -47,7 +45,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.runner == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -65,8 +63,50 @@ jobs:
         with:
           args: ${{ matrix.args }}
 
+      - name: Install jq
+        if: matrix.platform != 'windows'
+        uses: dcarbone/install-jq-action@v2.1.0
+
+      - name: Parse artifact paths
+        if: matrix.platform != 'windows'
+        id: parse_paths
+        run: |
+          artifact_paths='${{ steps.tauri_build.outputs.artifactPaths }}'
+          paths=$(echo "${artifact_paths}" | jq -r '.[]')
+          echo "${paths}"
+          echo "paths<<EOF" >> $GITHUB_OUTPUT
+          echo "${paths}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Parse artifact paths
+        if: matrix.platform == 'windows'
+        id: parse_paths_windows
+        run: |
+          $artifactPaths = '${{ steps.tauri_build.outputs.artifactPaths }}'
+          $paths = $artifactPaths | ConvertFrom-Json
+          $paths -join "`n"
+          "paths<<EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+          $paths | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+          "EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+        shell: pwsh
+
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        if: matrix.platform != 'windows'
+        uses: actions/upload-artifact@v4
         with:
-          name: tauri-artifacts
-          path: ${{ join(steps.tauri_build.outputs.artifactPaths, '\n') }}
+          name: build-${{ matrix.platform }} 
+          path: ${{ steps.parse_paths.outputs.paths }}
+
+      - name: Upload artifact
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.platform }} 
+          path: ${{ steps.parse_paths_windows.outputs.paths }}
+
+      - name: Upload portable artifact
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: portable-build-${{ matrix.platform }}
+          path: src-tauri/target/release/rapidfire.exe
