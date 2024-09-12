@@ -20,8 +20,7 @@ jobs:
           - runner: 'ubuntu-22.04' # for Tauri v1 you could replace this with ubuntu-20.04.
             args: ''
             platform: 'ubuntu'
-          - runner:
-              labels: windows-8core
+          - runner: 'windows-8core'
             args: ''
             platform: 'windows'
 
