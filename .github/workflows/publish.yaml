@@ -88,12 +88,12 @@ jobs:
         if: matrix.runner == 'windows-latest'
         id: parse_paths_windows
         run: |
-          $artifactPaths = "${{ steps.tauri_build.outputs.artifactPaths }}"
+          $artifactPaths = '${{ steps.tauri_build.outputs.artifactPaths }}'
           $paths = $artifactPaths | ConvertFrom-Json
           $paths -join "`n"
-          "paths<<EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT
-          $paths | Out-File -Append -FilePath $env:GITHUB_OUTPUT
-          "EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT
+          "paths<<EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          $paths | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
         shell: pwsh
 
       - name: Upload artifact
