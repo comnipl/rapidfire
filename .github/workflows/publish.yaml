@@ -75,13 +75,10 @@ jobs:
       - name: Parse artifact paths
         id: parse_paths
         run: |
-          artifact_paths='${{ steps.tauri_build.outputs.artifactPaths }}'
-          paths=$(echo "${artifact_paths}" | jq -r '.[]')
-          echo "${paths}"
-          echo "paths=${paths}" >> $GITHUB_OUTPUT
+          echo "${{ steps.tauri_build.outputs.artifactPaths }}" | jq -r '.[]' > paths.txt
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.platform }} 
-          path: ${{ steps.convert_paths.outputs.paths }}
+          path: $(cat paths.txt)
