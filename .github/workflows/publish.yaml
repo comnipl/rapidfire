@@ -69,11 +69,15 @@ jobs:
         with:
           args: ${{ matrix.args }}
 
-      - name: Check files
-        run: ls -l ${{ join(steps.tauri_build.outputs.artifactPaths, ' ') }}
+      - name: Install jq
+        uses: dcarbone/install-jq-action@v2.1.0
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.platform }}-build
-          path: ${{ steps.tauri_build.outputs.artifactPaths }}
+      - name: Upload artifacts
+        run: |
+          paths=$(echo '${{ steps.tauri_build.outputs.artifactPaths }}' | jq -r '.[]')
+          for file in $paths; do
+            echo "Uploading $file"
+            gh actions upload-artifact --name "$(basename "$file")" "$file"
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
