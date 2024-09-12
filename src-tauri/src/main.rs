@@ -11,7 +11,7 @@ use std::thread::{self, sleep};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use rodio::cpal::traits::HostTrait;
-use rodio::cpal::SupportedBufferSize;
+use rodio::cpal::{StreamConfig, SupportedBufferSize};
 use rodio::{cpal, Decoder, DeviceTrait, OutputStream, Sink, Source, SupportedStreamConfig};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -455,20 +455,17 @@ async fn dispatch_play_spawn(
         let source = Decoder::new(file).unwrap().buffered();
 
         let device = cpal::default_host().default_output_device().unwrap();
-
         let default_config = device.default_output_config().unwrap();
-        let config = SupportedStreamConfig::new(
-            default_config.channels(),
-            default_config.sample_rate(),
-            SupportedBufferSize::Range {
-                min: 4096,
-                max: 4096,
-            },
-            default_config.sample_format(),
-        );
+
+        let config = StreamConfig {
+            channels: default_config.channels(),
+            sample_rate: default_config.sample_rate(),
+            buffer_size: cpal::BufferSize::Fixed(4096),
+        };
 
         let (_stream, stream_handle) =
-            OutputStream::try_from_device_config(&device, config).unwrap();
+            OutputStream::try_from_config(&device, &config, &default_config.sample_format())
+                .unwrap();
 
         let sink = Sink::try_new(&stream_handle).unwrap();
         play.total_duration = source
