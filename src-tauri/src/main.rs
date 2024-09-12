@@ -10,7 +10,9 @@ use std::ops::Sub;
 use std::thread::{self, sleep};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use rodio::{Decoder, OutputStream, Sink, Source};
+use rodio::cpal::traits::HostTrait;
+use rodio::cpal::SupportedBufferSize;
+use rodio::{cpal, Decoder, DeviceTrait, OutputStream, Sink, Source, SupportedStreamConfig};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use tokio::fs;
@@ -450,9 +452,24 @@ async fn dispatch_play_spawn(
 ) {
     thread::spawn(move || {
         let file = BufReader::new(File::open(play.clone().sound.path).unwrap());
-        let source = Decoder::new(file).unwrap();
+        let source = Decoder::new(file).unwrap().buffered();
 
-        let (_stream, stream_handle) = OutputStream::try_default().unwrap();
+        let device = cpal::default_host().default_output_device().unwrap();
+
+        let default_config = device.default_output_config().unwrap();
+        let config = SupportedStreamConfig::new(
+            default_config.channels(),
+            default_config.sample_rate(),
+            SupportedBufferSize::Range {
+                min: 4096,
+                max: 4096,
+            },
+            default_config.sample_format(),
+        );
+
+        let (_stream, stream_handle) =
+            OutputStream::try_from_device_config(&device, config).unwrap();
+
         let sink = Sink::try_new(&stream_handle).unwrap();
         play.total_duration = source
             .total_duration()
