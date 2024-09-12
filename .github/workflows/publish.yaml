@@ -75,7 +75,10 @@ jobs:
       - name: Parse artifact paths
         id: parse_paths
         run: |
-          echo "${{ steps.tauri_build.outputs.artifactPaths }}" | jq -r '.[]' > paths.txt
+          artifact_paths='${{ steps.tauri_build.outputs.artifactPaths }}'
+          paths=$(echo "${artifact_paths}" | jq -r '.[]')
+          echo "${paths}"
+          echo "${paths}" > paths.txt
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
