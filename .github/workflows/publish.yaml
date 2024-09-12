@@ -72,12 +72,16 @@ jobs:
       - name: Install jq
         uses: dcarbone/install-jq-action@v2.1.0
 
-      - name: Upload artifacts
+      - name: Parse artifact paths
+        id: parse_paths
         run: |
-          paths=$(echo '${{ steps.tauri_build.outputs.artifactPaths }}' | jq -r '.[]')
-          for file in $paths; do
-            echo "Uploading $file"
-            gh actions upload-artifact --name "$(basename "$file")" "$file"
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          artifact_paths='${{ steps.tauri_build.outputs.artifactPaths }}'
+          paths=$(echo "${artifact_paths}" | jq -r '.[]')
+          echo "${paths}"
+          echo "paths=${paths}" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ matrix.platform }} 
+          path: ${{ steps.convert_paths.outputs.paths }}
