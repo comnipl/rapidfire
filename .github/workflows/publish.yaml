@@ -70,9 +70,11 @@ jobs:
           args: ${{ matrix.args }}
 
       - name: Install jq
+        if: matrix.runner != 'windows-latest'
         uses: dcarbone/install-jq-action@v2.1.0
 
       - name: Parse artifact paths
+        if: matrix.runner != 'windows-latest'
         id: parse_paths
         run: |
           artifact_paths='${{ steps.tauri_build.outputs.artifactPaths }}'
@@ -82,9 +84,28 @@ jobs:
           echo "${paths}" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - name: Parse artifact paths
+        if: matrix.runner == 'windows-latest'
+        id: parse_paths_windows
+        run: |
+          $artifactPaths = "${{ steps.tauri_build.outputs.artifactPaths }}"
+          $paths = $artifactPaths | ConvertFrom-Json
+          $paths -join "`n"
+          "paths<<EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT
+          $paths | Out-File -Append -FilePath $env:GITHUB_OUTPUT
+          "EOF" | Out-File -Append -FilePath $env:GITHUB_OUTPUT
+        shell: pwsh
 
       - name: Upload artifact
+        if: matrix.runner != 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.platform }} 
           path: ${{ steps.parse_paths.outputs.paths }}
+
+      - name: Upload artifact
+        if: matrix.runner == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.platform }} 
+          path: ${{ steps.parse_paths_windows.outputs.paths }}
