@@ -12,7 +12,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use rodio::cpal::traits::HostTrait;
 use rodio::cpal::{StreamConfig, SupportedBufferSize};
-use rodio::{cpal, Decoder, DeviceTrait, OutputStream, Sink, Source, SupportedStreamConfig};
+use rodio::{cpal, Decoder, DeviceTrait, OutputStream, Sink, Source};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use tokio::fs;
@@ -457,10 +457,15 @@ async fn dispatch_play_spawn(
         let device = cpal::default_host().default_output_device().unwrap();
         let default_config = device.default_output_config().unwrap();
 
+        let buffer_size = match default_config.buffer_size() {
+            SupportedBufferSize::Range { min: _, max } => cpal::BufferSize::Fixed(4096.max(*max)),
+            SupportedBufferSize::Unknown => cpal::BufferSize::Default,
+        };
+
         let config = StreamConfig {
             channels: default_config.channels(),
             sample_rate: default_config.sample_rate(),
-            buffer_size: cpal::BufferSize::Fixed(4096),
+            buffer_size,
         };
 
         let (_stream, stream_handle) =
