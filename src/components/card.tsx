@@ -44,16 +44,13 @@ export function Card({
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <Slider
-            className={cn(
-              getAccentColor("bgm"),
-              "duration-200",
-              !isEditorMode && "bg-neutral-200"
-            )}
+            accent={getAccentColor(type)}
             min={0}
             step={1}
             max={100}
             value={[volume]}
             onValueChange={(v) => setVolume(v[0])}
+            thumb={isEditorMode}
             disabled={!isEditorMode}
           />
         </div>
