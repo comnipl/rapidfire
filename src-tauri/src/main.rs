@@ -69,9 +69,17 @@ struct DispatchedPlay {
     id: String,
     scene_id: String,
     sound: SoundInstance,
-    last_played_when: f64,
-    last_played_from: f64,
+    paused: bool,
+    pos: f64,
     total_duration: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum DispatchPhase {
+    Loading,
+    Playing,
+    Paused
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -401,11 +409,8 @@ async fn main() {
                                 id: Ulid::new().to_string(),
                                 scene_id: scene_id.clone(),
                                 sound: sound.clone(),
-                                last_played_when: SystemTime::now()
-                                    .duration_since(UNIX_EPOCH)
-                                    .expect("time went backwards")
-                                    .as_secs_f64(),
-                                last_played_from: 0.0,
+                                paused: true,
+                                pos: 0.0,
                                 total_duration: 0.0,
                             };
                             let (tx, rx) = mpsc::channel(32);

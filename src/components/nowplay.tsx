@@ -14,8 +14,8 @@ import { invoke } from "@tauri-apps/api";
 type DispatchedPlay = {
   id: string;
   sound: SoundInstance;
-  last_played_when: number;
-  last_played_from: number;
+  paused: boolean;
+  phase: "loading" | "playing" | "paused";
   total_duration: number;
 };
 const formatTime = (v: number) => `${Math.floor(v / 60)}:${('0' + Math.round(v % 60)).slice(-2)}`;
