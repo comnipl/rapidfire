@@ -9,6 +9,7 @@ const Slider = React.forwardRef<
 >(({ className, accent, thumb = true, disabled, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
+    disabled={disabled}
     className={cn(
       "relative flex w-full touch-none select-none items-center rounded-full",
       className
