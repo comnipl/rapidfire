@@ -24,129 +24,110 @@ type DispatchCurrent = {
   phase: "playing" | "paused" | "loading";
 };
 
-type Dispatched = {
-  id: string,
-  dispatched: DispatchedPlay;
-  current: DispatchCurrent;
-  currentAt: number;
-};
 
 
-const formatTime = (v: number) => `${Math.floor(v / 60 / 1000)}:${('0' + Math.ceil((v / 1000) % 60)).slice(-2)}`;
+const formatTime = (v: number) => `${Math.floor(v / 60 / 1000)}:${('0' + Math.floor((v / 1000) % 60)).slice(-2)}`;
 
 export function NowPlay() {
 
-  const [dispatches, setDispatches] = useState<Dispatched[]>([]);
-  const counter = usePerformanceCounter();
+  const [dispatches, setDispatches] = useState<DispatchedPlay[]>([]);
 
   useEffect(() => {
     const unlisten = listen<DispatchedPlay[]>("dispatches", (event) => {
-      
-      const currentAt = performance.now();
-      setDispatches(prev => 
-        event.payload.map<Dispatched>(i => {
-          const found = prev.find(j => j.id === i.id);
-          if (found) {
-            return {
-              ...found,
-              dispatched: i
-            };
-          }
-          return {
-            id: i.id,
-            dispatched: i,
-            current: {
-              id: i.id,
-              pos: 0,
-              phase: "loading"
-            },
-            currentAt,
-          };
-        })
-      );
+      setDispatches(event.payload);
     });
-
     return () => {
       unlisten.then((f) => f());
     };
   }, []);
 
-  useEffect(() => {
-    const unlisten = listen<DispatchCurrent>("dispatch_current", (event) => {
-      console.log("dispatch_current", event.payload);
-      const currentAt = performance.now();
-      setDispatches(prev => 
-        prev.map<Dispatched>(i => {
-          if (i.id === event.payload.id) {
-            return {
-              ...i,
-              current: event.payload,
-              currentAt
-            };
-          }
-          return i;
-        })
-      );
-    });
-
-    return () => {
-      unlisten.then((f) => f());
-    };
-  });
-
   return (
     <div className="grid grid-cols-1 p-6 gap-2">
       {dispatches.map(item => (
-        <DispatchedItem key={item.id} item={item} counter={counter} />
+        <DispatchedItem key={item.id} item={item} />
       ))}
     </div>
   );
 }
 
-const DispatchedItem = ({ item, counter }: { item: Dispatched, counter: number }) => {
+const DispatchedItem = ({ item }: { item: DispatchedPlay }) => {
 
-  const pos = item.current.phase === "playing" ? counter - item.currentAt + item.current.pos : item.current.pos;
+  const [current, setCurrent] = useState<DispatchCurrent & { currentAt: number }>(
+    { id: item.id, pos: 0, phase: "loading", currentAt: performance.now() }
+  );
+
+  useEffect(() => {
+
+    invoke<DispatchCurrent>("get_dispatched_current", { id: item.id }).then((current) => {
+      setSeek(null);
+      setCurrent({
+        ...current,
+        currentAt: performance.now()
+      });
+    });
+
+    const unlisten = listen<DispatchCurrent>("dispatch_current", (event) => {
+      console.log(event.payload);
+      if (event.payload.id !== item.id) return;
+      setSeek(null);
+      setCurrent({
+        ...event.payload,
+        currentAt: performance.now()
+      });
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
+
+  const counter = usePerformanceCounter();
+
+  const pos = Math.max(current.phase === "playing" ? counter - current.currentAt + current.pos : current.pos, 0);
+  const progress = (pos / item.total_duration);
+  const [seek, setSeek] = useState<number | null>(null);
+
+  const seekedPos = seek === null ? pos : seek / 100 * item.total_duration;
 
   return (
     <div
       className={cn(
         "px-4 py-2 font-semibold flex items-center gap-6",
-        getBackgroundColor(item.dispatched.sound.variant)
+        getBackgroundColor(item.sound.variant)
       )}
     >
       <div>
-        {getAudioTypeIcon({ type: item.dispatched.sound.variant, className: "h-6 w-6" })}
+        {getAudioTypeIcon({ type: item.sound.variant, className: "h-6 w-6" })}
       </div>
-      <span className="text-xl w-72">{item.dispatched.sound.display_name}</span>
+      <span className="text-xl w-72">{item.sound.display_name}</span>
       <div className="flex-1 w-full">
-        <Slider accent={getAccentColor(item.dispatched.sound.variant)} thumb={false} disabled value={[
-          (pos / item.dispatched.total_duration) * 100
-        ]} />
+          <Slider accent={getAccentColor(item.sound.variant)} 
+            onValueChange={v => setSeek(v[0])}
+            onValueCommit={v => {
+              invoke("seek_dispatched_play", { id: item.id, pos: v[0] / 100 * item.total_duration });
+            }}
+            value={[
+              seek === null ? progress * 100 : seek,
+          ]} />
       </div>
-      <span>{formatTime(pos)} / {formatTime(item.dispatched.total_duration)}</span>
+      <span>{current.phase === "loading" ? "-:--" : formatTime(seekedPos)} / {formatTime(item.total_duration)}</span>
       <div className="flex gap-2">
-        {/*
-          <button className="p-2">
-            <LucidePause className="h-6 w-6" />
-          </button>
-        */}
-        <button className="p-2" onClick={() => {
-            invoke("pause_dispatched_play", { id: item.id, paused: item.current.phase === "playing" });
+        <button className={cn("p-2", current.phase === "loading" && "invisible")} onClick={() => {
+            invoke("pause_dispatched_play", { id: item.id, paused: current.phase === "playing" });
             }}>
           {
-            item.current.phase === "playing" ? 
-            <LucidePause className="h-6 w-6" /> : <LucidePlay className="h-6 w-6" />
+            current.phase === "playing" ? 
+              <LucidePause className="h-6 w-6" /> : <LucidePlay className="h-6 w-6" />
           }
-        </button>
-        <button className="p-2" onClick={() => {
-            invoke("stop_dispatched_play", { id: item.id, fade: true });
-            }}>
-          <LucideTriangleRight className="h-6 w-6 hue-rotate-90 -scale-x-100" />
         </button>
         <button className="p-2" onClick={() => {
            invoke("stop_dispatched_play", { id: item.id, fade: false });
         }}>
           <LucideSquare className="h-6 w-6 fill-black" />
+        </button>
+        <button className="p-2" onClick={() => {
+            invoke("stop_dispatched_play", { id: item.id, fade: true });
+            }}>
+          <LucideTriangleRight className="h-6 w-6 hue-rotate-90 -scale-x-100" />
         </button>
       </div>
     </div>

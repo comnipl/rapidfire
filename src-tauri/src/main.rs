@@ -61,13 +61,33 @@ enum ProjectMessage {
         id: String,
         paused: bool,
     },
+    GetDispatchedCurrent {
+        id: String,
+        current_tx: oneshot::Sender<DispatchedCurrent>,
+    },
+    SeekDispatchedPlay {
+        id: String,
+        pos: f64,
+    },
     PanicButton,
 }
 
 enum DispatchMessage {
-    Stop { fade: bool },
-    VolumeChange { volume: f32 },
-    Pause { paused: bool },
+    Stop {
+        fade: bool,
+    },
+    VolumeChange {
+        volume: f32,
+    },
+    Pause {
+        paused: bool,
+    },
+    GetDispatchedCurrent {
+        current_tx: oneshot::Sender<DispatchedCurrent>,
+    },
+    Seek {
+        pos: f64,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -247,6 +267,34 @@ async fn dispatch_play(
 }
 
 #[tauri::command]
+async fn seek_dispatched_play(
+    state: tauri::State<'_, RapidFireState>,
+    id: String,
+    pos: f64,
+) -> Result<(), ()> {
+    state
+        .project_tx
+        .send(ProjectMessage::SeekDispatchedPlay { id, pos })
+        .await
+        .unwrap();
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_dispatched_current(
+    state: tauri::State<'_, RapidFireState>,
+    id: String,
+) -> Result<DispatchedCurrent, ()> {
+    let (tx, rx) = oneshot::channel();
+    state
+        .project_tx
+        .send(ProjectMessage::GetDispatchedCurrent { id, current_tx: tx })
+        .await
+        .unwrap();
+    rx.await.map_err(|_| ())
+}
+
+#[tauri::command]
 async fn panic_button(state: tauri::State<'_, RapidFireState>) -> Result<(), ()> {
     state
         .project_tx
@@ -315,6 +363,8 @@ async fn main() {
             dispatch_play,
             stop_dispatched_play,
             pause_dispatched_play,
+            seek_dispatched_play,
+            get_dispatched_current,
             panic_button,
             save
         ])
@@ -498,6 +548,22 @@ async fn main() {
                             .expect("failed to send pause message");
                     }
                 }
+                ProjectMessage::GetDispatchedCurrent { id, current_tx } => {
+                    if let Some(item) = dispatched_map.iter().find(|(play, _)| play.id == id) {
+                        item.1
+                            .send(DispatchMessage::GetDispatchedCurrent { current_tx })
+                            .await
+                            .expect("failed to send current message");
+                    }
+                }
+                ProjectMessage::SeekDispatchedPlay { id, pos } => {
+                    if let Some(item) = dispatched_map.iter_mut().find(|(play, _)| play.id == id) {
+                        item.1
+                            .send(DispatchMessage::Seek { pos })
+                            .await
+                            .expect("failed to send seek message");
+                    }
+                }
             }
         }
 
@@ -515,7 +581,7 @@ async fn dispatch_play_spawn(
 ) {
     thread::spawn(move || {
         let file = BufReader::new(File::open(play.clone().sound.path).unwrap());
-        let source = Decoder::new(file).unwrap().buffered();
+        let source = Decoder::new(file).unwrap();
 
         let device = cpal::default_host().default_output_device().unwrap();
         let default_config = device.default_output_config().unwrap();
@@ -593,6 +659,31 @@ async fn dispatch_play_spawn(
                             }
                             sink.stop();
                             break;
+                        }
+                        DispatchMessage::GetDispatchedCurrent { current_tx } => {
+                            current_tx
+                                .send(DispatchedCurrent {
+                                    id: play.clone().id,
+                                    phase: match sink.is_paused() {
+                                        true => DispatchPhase::Paused,
+                                        false => DispatchPhase::Playing,
+                                    },
+                                    pos: sink.get_pos().as_secs_f64() * 1000.0,
+                                })
+                                .unwrap();
+                        }
+                        DispatchMessage::Seek { pos } => {
+                            let duration = std::time::Duration::from_millis(pos.floor() as u64);
+                            let _ = sink.try_seek(duration);
+                            DispatchedCurrent {
+                                id: play.clone().id,
+                                phase: match sink.is_paused() {
+                                    true => DispatchPhase::Paused,
+                                    false => DispatchPhase::Playing,
+                                },
+                                pos: sink.get_pos().as_secs_f64() * 1000.0,
+                            }
+                            .emit(&event_tx);
                         }
                     }
                 }
