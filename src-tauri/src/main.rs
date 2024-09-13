@@ -8,7 +8,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::ops::Sub;
 use std::thread::{self, sleep};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use rodio::cpal::traits::HostTrait;
 use rodio::cpal::{StreamConfig, SupportedBufferSize};
@@ -25,6 +25,7 @@ enum Event {
     VolumeWarning { is_full: bool },
     Project { project: Project },
     Dispatches { dispatches: Vec<DispatchedPlay> },
+    DispatchCurrent { current: DispatchedCurrent },
 }
 
 enum ProjectMessage {
@@ -56,12 +57,37 @@ enum ProjectMessage {
     RemoveDispatchedPlay {
         id: String,
     },
+    PauseDispatchedPlay {
+        id: String,
+        paused: bool,
+    },
+    GetDispatchedCurrent {
+        id: String,
+        current_tx: oneshot::Sender<DispatchedCurrent>,
+    },
+    SeekDispatchedPlay {
+        id: String,
+        pos: f64,
+    },
     PanicButton,
 }
 
 enum DispatchMessage {
-    Stop { fade: bool },
-    VolumeChange { volume: f32 },
+    Stop {
+        fade: bool,
+    },
+    VolumeChange {
+        volume: f32,
+    },
+    Pause {
+        paused: bool,
+    },
+    GetDispatchedCurrent {
+        current_tx: oneshot::Sender<DispatchedCurrent>,
+    },
+    Seek {
+        pos: f64,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -69,9 +95,32 @@ struct DispatchedPlay {
     id: String,
     scene_id: String,
     sound: SoundInstance,
-    last_played_when: f64,
-    last_played_from: f64,
     total_duration: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DispatchedCurrent {
+    id: String,
+    phase: DispatchPhase,
+    pos: f64,
+}
+
+impl DispatchedCurrent {
+    fn emit(&self, event_tx: &mpsc::Sender<Event>) {
+        event_tx
+            .blocking_send(Event::DispatchCurrent {
+                current: self.clone(),
+            })
+            .unwrap();
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum DispatchPhase {
+    Loading,
+    Playing,
+    Paused,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -173,6 +222,20 @@ async fn stop_dispatched_play(
 }
 
 #[tauri::command]
+async fn pause_dispatched_play(
+    state: tauri::State<'_, RapidFireState>,
+    id: String,
+    paused: bool,
+) -> Result<(), ()> {
+    state
+        .project_tx
+        .send(ProjectMessage::PauseDispatchedPlay { id, paused })
+        .await
+        .unwrap();
+    Ok(())
+}
+
+#[tauri::command]
 async fn patch_sound_looped(
     state: tauri::State<'_, RapidFireState>,
     payload: PatchSoundLooped,
@@ -201,6 +264,34 @@ async fn dispatch_play(
         .await
         .unwrap();
     Ok(())
+}
+
+#[tauri::command]
+async fn seek_dispatched_play(
+    state: tauri::State<'_, RapidFireState>,
+    id: String,
+    pos: f64,
+) -> Result<(), ()> {
+    state
+        .project_tx
+        .send(ProjectMessage::SeekDispatchedPlay { id, pos })
+        .await
+        .unwrap();
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_dispatched_current(
+    state: tauri::State<'_, RapidFireState>,
+    id: String,
+) -> Result<DispatchedCurrent, ()> {
+    let (tx, rx) = oneshot::channel();
+    state
+        .project_tx
+        .send(ProjectMessage::GetDispatchedCurrent { id, current_tx: tx })
+        .await
+        .unwrap();
+    rx.await.map_err(|_| ())
 }
 
 #[tauri::command]
@@ -250,6 +341,11 @@ async fn main() {
                                 .emit_all("dispatches", dispatches)
                                 .expect("failed to emit event");
                         }
+                        Event::DispatchCurrent { current } => {
+                            app_handle
+                                .emit_all("dispatch_current", current)
+                                .expect("failed to emit event");
+                        }
                     }
                 }
             });
@@ -266,6 +362,9 @@ async fn main() {
             patch_sound_looped,
             dispatch_play,
             stop_dispatched_play,
+            pause_dispatched_play,
+            seek_dispatched_play,
+            get_dispatched_current,
             panic_button,
             save
         ])
@@ -401,16 +500,13 @@ async fn main() {
                                 id: Ulid::new().to_string(),
                                 scene_id: scene_id.clone(),
                                 sound: sound.clone(),
-                                last_played_when: SystemTime::now()
-                                    .duration_since(UNIX_EPOCH)
-                                    .expect("time went backwards")
-                                    .as_secs_f64(),
-                                last_played_from: 0.0,
                                 total_duration: 0.0,
                             };
                             let (tx, rx) = mpsc::channel(32);
                             dispatched_map.push((dispatch.clone(), tx));
-                            dispatch_play_spawn(dispatch, rx, project_tx.clone()).await;
+                            dispatch_refresh(event_tx.clone(), dispatched_map.clone()).await;
+                            dispatch_play_spawn(dispatch, rx, project_tx.clone(), event_tx.clone())
+                                .await;
                         }
                     }
                 }
@@ -444,6 +540,30 @@ async fn main() {
                     dispatched_map.clear();
                     dispatch_refresh(event_tx.clone(), dispatched_map.clone()).await;
                 }
+                ProjectMessage::PauseDispatchedPlay { id, paused } => {
+                    if let Some(item) = dispatched_map.iter_mut().find(|(play, _)| play.id == id) {
+                        item.1
+                            .send(DispatchMessage::Pause { paused })
+                            .await
+                            .expect("failed to send pause message");
+                    }
+                }
+                ProjectMessage::GetDispatchedCurrent { id, current_tx } => {
+                    if let Some(item) = dispatched_map.iter().find(|(play, _)| play.id == id) {
+                        item.1
+                            .send(DispatchMessage::GetDispatchedCurrent { current_tx })
+                            .await
+                            .expect("failed to send current message");
+                    }
+                }
+                ProjectMessage::SeekDispatchedPlay { id, pos } => {
+                    if let Some(item) = dispatched_map.iter_mut().find(|(play, _)| play.id == id) {
+                        item.1
+                            .send(DispatchMessage::Seek { pos })
+                            .await
+                            .expect("failed to send seek message");
+                    }
+                }
             }
         }
 
@@ -456,11 +576,12 @@ async fn main() {
 async fn dispatch_play_spawn(
     mut play: DispatchedPlay,
     mut receiver: mpsc::Receiver<DispatchMessage>,
-    event_tx: mpsc::Sender<ProjectMessage>,
+    project_tx: mpsc::Sender<ProjectMessage>,
+    event_tx: mpsc::Sender<Event>,
 ) {
     thread::spawn(move || {
         let file = BufReader::new(File::open(play.clone().sound.path).unwrap());
-        let source = Decoder::new(file).unwrap().buffered();
+        let source = Decoder::new(file).unwrap();
 
         let device = cpal::default_host().default_output_device().unwrap();
         let default_config = device.default_output_config().unwrap();
@@ -484,12 +605,22 @@ async fn dispatch_play_spawn(
         play.total_duration = source
             .total_duration()
             .map(|d| d.as_secs_f64())
-            .unwrap_or(0.0);
-        event_tx
+            .unwrap_or(0.0)
+            * 1000.0;
+
+        project_tx
             .blocking_send(ProjectMessage::RefreshDispatchedPlays {
                 target: play.clone(),
             })
             .unwrap();
+
+        DispatchedCurrent {
+            id: play.clone().id,
+            phase: DispatchPhase::Playing,
+            pos: 0.0,
+        }
+        .emit(&event_tx);
+
         thread::scope(|s| {
             sink.append(source);
             sink.set_volume(play.sound.volume as f32 / 100.0);
@@ -499,6 +630,25 @@ async fn dispatch_play_spawn(
                     match message {
                         DispatchMessage::VolumeChange { volume } => {
                             sink.set_volume(volume);
+                        }
+                        DispatchMessage::Pause { paused } => {
+                            if paused {
+                                sink.pause();
+                                DispatchedCurrent {
+                                    id: play.clone().id,
+                                    phase: DispatchPhase::Paused,
+                                    pos: sink.get_pos().as_secs_f64() * 1000.0,
+                                }
+                                .emit(&event_tx);
+                            } else {
+                                sink.play();
+                                DispatchedCurrent {
+                                    id: play.clone().id,
+                                    phase: DispatchPhase::Playing,
+                                    pos: sink.get_pos().as_secs_f64() * 1000.0,
+                                }
+                                .emit(&event_tx);
+                            }
                         }
                         DispatchMessage::Stop { fade } => {
                             if fade {
@@ -510,6 +660,31 @@ async fn dispatch_play_spawn(
                             sink.stop();
                             break;
                         }
+                        DispatchMessage::GetDispatchedCurrent { current_tx } => {
+                            current_tx
+                                .send(DispatchedCurrent {
+                                    id: play.clone().id,
+                                    phase: match sink.is_paused() {
+                                        true => DispatchPhase::Paused,
+                                        false => DispatchPhase::Playing,
+                                    },
+                                    pos: sink.get_pos().as_secs_f64() * 1000.0,
+                                })
+                                .unwrap();
+                        }
+                        DispatchMessage::Seek { pos } => {
+                            let duration = std::time::Duration::from_millis(pos.floor() as u64);
+                            let _ = sink.try_seek(duration);
+                            DispatchedCurrent {
+                                id: play.clone().id,
+                                phase: match sink.is_paused() {
+                                    true => DispatchPhase::Paused,
+                                    false => DispatchPhase::Playing,
+                                },
+                                pos: sink.get_pos().as_secs_f64() * 1000.0,
+                            }
+                            .emit(&event_tx);
+                        }
                     }
                 }
             });
@@ -520,7 +695,7 @@ async fn dispatch_play_spawn(
                         break;
                     }
                 }
-                let _ = event_tx.blocking_send(ProjectMessage::RemoveDispatchedPlay {
+                let _ = project_tx.blocking_send(ProjectMessage::RemoveDispatchedPlay {
                     id: play.clone().id,
                 });
             });
@@ -530,15 +705,12 @@ async fn dispatch_play_spawn(
                 sleep(source.total_duration().unwrap_or(Duration::from_secs(1)) / 2);
                 if 5 > sink.len() && sink.len() > 0 && play.sound.looped {
                     sink.append(source);
-                    let mut new_play = play.clone();
-                    new_play.last_played_from = 0.0;
-                    new_play.last_played_when = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .expect("time went backwards")
-                        .as_secs_f64();
-                    event_tx
-                        .blocking_send(ProjectMessage::RefreshDispatchedPlays { target: new_play })
-                        .unwrap();
+                    DispatchedCurrent {
+                        id: play.clone().id,
+                        phase: DispatchPhase::Playing,
+                        pos: 0.0,
+                    }
+                    .emit(&event_tx);
                 } else {
                     break;
                 }
