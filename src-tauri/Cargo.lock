@@ -2581,14 +2581,15 @@ dependencies = [
 
 [[package]]
 name = "rodio"
-version = "0.17.2"
-source = "git+https://github.com/PetrGlad/rodio?branch=configurable-buffer-size#08207b1acafee65f90f7c94cfe5942b3a04c3b1b"
+version = "0.19.0"
+source = "git+https://github.com/pulsuite/rodio?branch=configurable-buffer-size#38da1e36e0019f52f89f5db0fb5f99a8de827a98"
 dependencies = [
  "claxon",
  "cpal",
  "hound",
  "lewton",
  "symphonia",
+ "thiserror",
 ]
 
 [[package]]
