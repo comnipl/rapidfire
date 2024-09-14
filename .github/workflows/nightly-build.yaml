@@ -1,7 +1,11 @@
-name: 'publish'
+name: 'nightly-build'
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+
 
 jobs:
   publish-tauri:
