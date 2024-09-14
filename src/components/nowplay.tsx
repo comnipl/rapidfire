@@ -87,6 +87,7 @@ const DispatchedItem = ({ item }: { item: DispatchedPlay }) => {
   const [seek, setSeek] = useState<number | null>(null);
 
   const seekedPos = seek === null ? pos : seek / 100 * item.total_duration;
+  const sliderDisabled = current.phase === "loading";
 
   return (
     <div
@@ -105,6 +106,8 @@ const DispatchedItem = ({ item }: { item: DispatchedPlay }) => {
             onValueCommit={v => {
               invoke("seek_dispatched_play", { id: item.id, pos: v[0] / 100 * item.total_duration });
             }}
+            thumb={!sliderDisabled}
+            disabled={sliderDisabled}
             value={[
               seek === null ? progress * 100 : seek,
           ]} />
