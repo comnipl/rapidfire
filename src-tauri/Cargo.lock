@@ -2582,7 +2582,7 @@ dependencies = [
 [[package]]
 name = "rodio"
 version = "0.19.0"
-source = "git+https://github.com/pulsuite/rodio?branch=configurable-buffer-size#38da1e36e0019f52f89f5db0fb5f99a8de827a98"
+source = "git+https://github.com/pulsuite/rodio?branch=configurable-buffer-size-without-play#6cf4bc850334e96e864802f617a8342e286a33f4"
 dependencies = [
  "claxon",
  "cpal",
