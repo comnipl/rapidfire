@@ -46,6 +46,15 @@ function App() {
     display_name: scene.display_name,
   }));
 
+  const [version, setVersion] = useState<string>("");
+
+  useEffect(() => {
+    invoke<string>("version").then((response) =>
+      setVersion(response)
+    );
+  }, []);
+
+
   const sounds = project.scenes.find(scene => scene.id === selectedSceneId)?.sounds || [];
 
   useEffect(() => {
@@ -93,7 +102,7 @@ function App() {
       <Footer
         currentMode={isEditorMode}
         setEditorMode={setEditorMode}
-        version="v0.1.0"
+        version={version}
       />
     </div>
   );
