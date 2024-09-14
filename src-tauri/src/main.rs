@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 pub mod msgbox;
+pub mod version;
 pub mod volume;
 
 use std::fs::File;
@@ -19,6 +20,7 @@ use tokio::fs;
 use tokio::sync::{mpsc, oneshot};
 use ulid::Ulid;
 
+use self::version::GIT_TAG;
 use self::volume::volume;
 
 enum Event {
@@ -175,6 +177,14 @@ struct SoundScene {
 struct Project {
     display_name: String,
     scenes: Vec<SoundScene>,
+}
+
+#[tauri::command]
+fn version() -> String {
+    match GIT_TAG {
+        Some(tag) => tag.to_string(),
+        None => format!("(nightly {})", version::GIT_HASH),
+    }
 }
 
 #[tauri::command]
@@ -356,6 +366,7 @@ async fn main() {
             project_tx: project_tx.clone(),
         })
         .invoke_handler(tauri::generate_handler![
+            version,
             get_volume_warning,
             get_project,
             patch_sound_volume,

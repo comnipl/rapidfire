@@ -1,7 +1,11 @@
-name: 'publish'
+name: 'nightly-build'
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+
 
 jobs:
   publish-tauri:
@@ -14,19 +18,27 @@ jobs:
           - runner: 'macos-latest'
             args: '--target aarch64-apple-darwin'
             platform: 'macos-aarch64'
-          - runner: 'windows-8core'
+          - runner: 'windows-latest'
             args: ''
             platform: 'windows'
+          - runner: 'ubuntu-latest'
+            args: ''
+            platform: 'ubuntu'
 
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
+
+      - name: Run slugify
+        id: slugify
+        uses: eltimn/slugify-action@v2.0.1
+
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu' # This must match the platform value defined above.
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf librust-alsa-sys-dev
         # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
         # You can remove the one that doesn't apply to your app to speed up the workflow a bit.
 
@@ -94,19 +106,19 @@ jobs:
         if: matrix.platform != 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.platform }} 
+          name: build-${{ matrix.platform }}-${{ steps.slugify.outputs.sha }}
           path: ${{ steps.parse_paths.outputs.paths }}
 
       - name: Upload artifact
         if: matrix.platform == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.platform }} 
+          name: build-${{ matrix.platform }}-${{ steps.slugify.outputs.sha }}
           path: ${{ steps.parse_paths_windows.outputs.paths }}
 
       - name: Upload portable artifact
         if: matrix.platform == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: portable-build-${{ matrix.platform }}
+          name: portable-build-${{ matrix.platform }}-${{ steps.slugify.outputs.sha }}
           path: src-tauri/target/release/rapidfire.exe
