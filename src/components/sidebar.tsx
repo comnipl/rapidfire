@@ -22,7 +22,7 @@ export function SceneCard({ scene, isSelected, onClick }: {
 }) {
   return (
     <button className={cn(
-      "w-full text-left py-2.5 px-3 rounded text-slate-700 transition-all duration-500 ease-out-expo flex items-center",
+      "w-full text-left py-3 px-3 rounded text-slate-700 transition-all duration-500 ease-out-expo flex items-center",
       !isSelected && 'hover:bg-pink-100',
       isSelected && 'bg-pink-400 pl-5 font-semibold shadow-lg shadow-pink-400/50 text-white',
     )} onClick={onClick}>
