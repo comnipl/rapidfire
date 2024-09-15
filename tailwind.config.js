@@ -9,6 +9,10 @@ export default {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+      transitionTimingFunction: {
+        'out-expo': 'cubic-bezier(0.19, 1, 0.22, 1)',
+        'in-out-expo': 'cubic-bezier(0.87, 0, 0.13, 1)'
+      },
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',

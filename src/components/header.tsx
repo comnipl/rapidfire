@@ -38,7 +38,7 @@ export function Header({ title }: HeaderProps) {
           <LucideTriangleAlert className="h-5 mr-1" />
           <p className="m-0">音量が100%ではありません</p>
         </div>
-        <button className="aspect-square p-4 bg-red-700" onClick={() => {
+        <button className="aspect-square p-4 bg-red-700 rounded" onClick={() => {
           invoke("panic_button");
         }}>
           <LucideCircleOff className="text-white h-6 w-6" />
