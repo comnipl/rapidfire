@@ -1,8 +1,8 @@
 import { LucideCircleOff } from "lucide-react";
-import { useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api";
+import { useListenState } from "@/lib/useListenState";
 
 type HeaderProps = {
   title: string;
@@ -13,21 +13,17 @@ type VolumeWarningPayload = {
 };
 
 export function Header({ title }: HeaderProps) {
-  const [isVolumeFull, setIsVolumeFull] = useState(true);
 
-  useEffect(() => {
-    invoke<VolumeWarningPayload>("get_volume_warning").then((response) =>
-      setIsVolumeFull(response.is_full)
-    );
-
-    const unlisten = listen<VolumeWarningPayload>("volume_warning", (event) => {
-      setIsVolumeFull(event.payload.is_full);
-    });
-
-    return () => {
-      unlisten.then((f) => f());
-    };
-  }, []);
+  const isVolumeFull = useListenState<VolumeWarningPayload, boolean>(
+    "volume_warning",
+    useCallback(async (payload) => payload.is_full, []),
+    true,
+    useCallback(async () => {
+      const response = await invoke<VolumeWarningPayload>("get_volume_warning");
+      return response.is_full;
+    }, []),
+    false,
+  );
 
   return (
     <header className="flex justify-between h-fit w-full py-2 px-6 items-center">
