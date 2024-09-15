@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api";
 import { usePerformanceCounter } from "@/lib/usePerformanceCounter";
+import { useListen } from "@/lib/useListen";
 
 type DispatchedPlay = {
   id: string;
@@ -56,8 +57,16 @@ const DispatchedItem = ({ item }: { item: DispatchedPlay }) => {
     { id: item.id, pos: 0, phase: "loading", currentAt: performance.now() }
   );
 
-  useEffect(() => {
+  useListen<DispatchCurrent>('dispatch_current', async event => {
+    if (event.payload.id !== item.id) return;
+    setSeek(null);
+    setCurrent({
+      ...event.payload,
+      currentAt: performance.now()
+    });
+  });
 
+  useEffect(() => {
     invoke<DispatchCurrent>("get_dispatched_current", { id: item.id }).then((current) => {
       setSeek(null);
       setCurrent({
@@ -65,19 +74,6 @@ const DispatchedItem = ({ item }: { item: DispatchedPlay }) => {
         currentAt: performance.now()
       });
     });
-
-    const unlisten = listen<DispatchCurrent>("dispatch_current", (event) => {
-      console.log(event.payload);
-      if (event.payload.id !== item.id) return;
-      setSeek(null);
-      setCurrent({
-        ...event.payload,
-        currentAt: performance.now()
-      });
-    });
-    return () => {
-      unlisten.then((f) => f());
-    };
   }, []);
 
   const counter = usePerformanceCounter();

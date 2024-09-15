@@ -1,6 +1,5 @@
 import { LucideCircleOff } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api";
 import { useListenState } from "@/lib/useListenState";
