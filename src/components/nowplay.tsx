@@ -7,11 +7,11 @@ import {
   getBackgroundColor,
 } from "@/lib/colortype";
 import { SoundInstance } from "@/App";
-import { useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api";
 import { usePerformanceCounter } from "@/lib/usePerformanceCounter";
 import { useListen } from "@/lib/useListen";
+import { useListenState } from "@/lib/useListenState";
 
 type DispatchedPlay = {
   id: string;
@@ -31,16 +31,13 @@ const formatTime = (v: number) => `${Math.floor(v / 60 / 1000)}:${('0' + Math.fl
 
 export function NowPlay() {
 
-  const [dispatches, setDispatches] = useState<DispatchedPlay[]>([]);
-
-  useEffect(() => {
-    const unlisten = listen<DispatchedPlay[]>("dispatches", (event) => {
-      setDispatches(event.payload);
-    });
-    return () => {
-      unlisten.then((f) => f());
-    };
-  }, []);
+  const dispatches = useListenState<DispatchedPlay[], DispatchedPlay[]>(
+    "dispatches",
+    useCallback(async (payload) => payload, []),
+    [],
+    useCallback(async () => [], []),
+    []
+  );
 
   return (
     <div className="grid grid-cols-1 p-6 gap-2">
