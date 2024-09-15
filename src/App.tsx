@@ -3,12 +3,11 @@ import { Header } from "./components/header";
 import { NowPlay } from "./components/nowplay";
 import { SideBar } from "./components/sidebar";
 import { Footer } from "./components/footer";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "./components/card";
 import { AudioPlayType } from "./lib/type";
 import { invoke } from "@tauri-apps/api";
-import { useListenState } from "./lib/useListenState";
-import { mockProject } from "./lib/mocks";
+import { listen } from "@tauri-apps/api/event";
 
 export type Project = {
   display_name: string,
@@ -33,16 +32,10 @@ export type SoundInstance = {
 
 function App() {
 
-  const project = useListenState<Project, Project>(
-    "project",
-    useCallback(async (value) => value, []),
-    {
-      display_name: "Loading...",
-      scenes: [],
-    },
-    useCallback(async () => invoke<Project>("get_project"), []),
-    mockProject,
-  );
+  const [project, setProject] = useState<Project>({
+    display_name: "Loading...",
+    scenes: [],
+  });
 
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
 
@@ -64,12 +57,27 @@ function App() {
 
   const sounds = project.scenes.find(scene => scene.id === selectedSceneId)?.sounds || [];
 
+  useEffect(() => {
+    
+    invoke<Project>("get_project").then((response) =>
+      setProject(response)
+    );
+
+    const unlisten = listen<Project>("project", (event) => {
+      setProject(event.payload);
+    });
+
+    return () => {
+      unlisten.then(f => f());
+    };
+  }, []);
+
   return (
     <div className="flex h-dvh flex-col">
       <Header title={project.display_name} />
       <div className="flex-1 flex overflow-y-hidden">
         <SideBar scenes={scenes} className="w-64 overflow-y-scroll" sceneId={selectedSceneId} setSceneId={id => setSelectedSceneId(id)} />
-        <div className="col-span-10 bg-neutral-50 flex flex-wrap items-start content-start overflow-y-scroll flex-1 p-3 pr-8">
+        <div className="col-span-10 flex flex-wrap items-start content-start overflow-y-scroll flex-1 pl-6 pr-8 gap-6">
           {sounds.map(s => (
             <Card
               id={s.id}

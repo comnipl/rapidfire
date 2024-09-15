@@ -1,9 +1,9 @@
 import { Slider } from "./ui/slider";
 import { cn } from "@/lib/utils";
-import { getAccentColor, getAudioTypeIcon } from "@/lib/colortype";
+import { getAccentColor, getAudioTypeIcon, getBackgroundColor } from "@/lib/colortype";
 import { AudioPlayType } from "@/lib/type";
 import { LucideRepeat } from "lucide-react";
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useCallback } from "react";
 import { invoke } from "@tauri-apps/api";
 
 export type CardType = {
@@ -29,16 +29,21 @@ export function Card({
   volume,
   setVolume,
 }: CardType) {
+
+  const pushAction = useCallback(() => {
+    if (isEditorMode) return;
+    invoke("dispatch_play", {
+        sceneId: sceneId,
+        soundId: id,
+    });
+  }, [isEditorMode, sceneId, id]);
+
   return (
-    <div className="w-64 p-4 h-fit gap-4 border-2 border-neutral-200 flex flex-col justify-between hover:bg-neutral-100 m-3" onClick={() => {
-      if (isEditorMode) return;
-      invoke("dispatch_play", {
-          sceneId: sceneId,
-          soundId: id,
-      });
-    }}>
+    <div role="button" tabIndex={0} onClick={pushAction}
+      className="w-64 p-4 h-fit gap-4 shadow-xl flex flex-col justify-between rounded-lg shadow-sm border border-slate-200 hover:bg-slate-50"
+    >
       <h2 className="text-lg font-semibold text-center">{title}</h2>
-      <div className="mx-auto w-fit p-4 bg-slate-300 rounded-full">
+      <div className={cn("mx-auto w-fit p-4 bg-slate-300 rounded-full text-white", getAccentColor(type))}>
         {getAudioTypeIcon({ type, className: "h-6 w-6" })}
       </div>
       <div className="flex items-center gap-4">
@@ -61,7 +66,7 @@ export function Card({
           step={1}
           value={volume}
           onChange={(e) => setVolume(Number(e.target.value))}
-          className="w-12 font-semibold"
+          className="w-12 font-semibold bg-transparent"
           disabled={!isEditorMode}
         />
         <button

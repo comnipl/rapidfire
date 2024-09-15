@@ -7,7 +7,7 @@ export function SideBar({ className, scenes, sceneId, setSceneId }: {
   setSceneId: (id: string) => void;
 }) {
   return (
-    <div className={cn("w-full h-full px-4 flex flex-col shadow-inner py-4 gap-2 bg-[#f8fafc]", className)}>
+    <div className={cn("w-full h-full px-4 flex flex-col shadow-inner py-4 gap-2 bg-[#f8fafc] rounded-r-xl", className)}>
       {scenes.map(item => (
         <SceneCard scene={item} isSelected={sceneId === item.id} onClick={() => setSceneId(item.id)} />
       ))}
