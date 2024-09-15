@@ -1,6 +1,6 @@
 import { Slider } from "./ui/slider";
 import { cn } from "@/lib/utils";
-import { getAccentColor, getAudioTypeIcon, getBackgroundColor } from "@/lib/colortype";
+import { getAccentColor, getAudioTypeIcon } from "@/lib/colortype";
 import { AudioPlayType } from "@/lib/type";
 import { LucideRepeat } from "lucide-react";
 import { Dispatch, SetStateAction, useCallback } from "react";
