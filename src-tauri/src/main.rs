@@ -599,9 +599,7 @@ async fn dispatch_play_spawn(
 
         let buffer_size = match default_config.buffer_size() {
             SupportedBufferSize::Range { min, max } => {
-                let buffer = cpal::BufferSize::Fixed(4096.min(*max));
-                msgbox::msgbox(&format!("min = {}, max = {}, set = {:?}", min, max, buffer));
-                buffer
+                cpal::BufferSize::Fixed(4096.min(*max).max(*min))
             }
             SupportedBufferSize::Unknown => cpal::BufferSize::Default,
         };
@@ -702,6 +700,7 @@ async fn dispatch_play_spawn(
                         }
                     }
                 }
+                println!("Thread a end.");
             });
             s.spawn(|| {
                 loop {
@@ -713,23 +712,29 @@ async fn dispatch_play_spawn(
                 let _ = project_tx.blocking_send(ProjectMessage::RemoveDispatchedPlay {
                     id: play.clone().id,
                 });
+                println!("Thread b end.");
             });
-            s.spawn(|| loop {
-                let file = BufReader::new(File::open(play.clone().sound.path).unwrap());
-                let source = Decoder::new(file).unwrap();
-                sleep(source.total_duration().unwrap_or(Duration::from_secs(1)) / 2);
-                if 5 > sink.len() && sink.len() > 0 && play.sound.looped {
-                    sink.append(source);
-                    DispatchedCurrent {
-                        id: play.clone().id,
-                        phase: DispatchPhase::Playing,
-                        pos: 0.0,
+            s.spawn(|| {
+                loop {
+                    let file = BufReader::new(File::open(play.clone().sound.path).unwrap());
+                    let source = Decoder::new(file).unwrap();
+                    sleep(source.total_duration().unwrap_or(Duration::from_secs(1)) / 2);
+                    if 5 > sink.len() && sink.len() > 0 && play.sound.looped {
+                        sink.append(source);
+                        DispatchedCurrent {
+                            id: play.clone().id,
+                            phase: DispatchPhase::Playing,
+                            pos: 0.0,
+                        }
+                        .emit(&event_tx);
+                    } else {
+                        break;
                     }
-                    .emit(&event_tx);
-                } else {
-                    break;
                 }
+                println!("Thread c end.");
             });
+            println!("Thread scope end.");
         });
+        println!("Thread end.");
     });
 }
