@@ -327,8 +327,6 @@ async fn get_project(state: tauri::State<'_, RapidFireState>) -> Result<Project,
 
 #[tokio::main]
 async fn main() {
-    println!("log test");
-    panic!("panic test");
     let (event_tx_original, mut event_rx) = mpsc::channel(32);
     let (project_tx, mut project_rx) = mpsc::channel(32);
 
