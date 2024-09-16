@@ -69,7 +69,7 @@ function App() {
       <Header title={project.display_name} />
       <div className="flex-1 flex overflow-y-hidden">
         <SideBar scenes={scenes} className="w-64 overflow-y-scroll" sceneId={selectedSceneId} setSceneId={id => setSelectedSceneId(id)} />
-        <div className="col-span-10 bg-neutral-50 flex flex-wrap items-start content-start overflow-y-scroll flex-1 p-3 pr-8">
+        <div className="col-span-10 flex flex-wrap items-start content-start overflow-y-scroll flex-1 pl-6 pr-8 gap-6">
           {sounds.map(s => (
             <Card
               id={s.id}
