@@ -1,7 +1,9 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+pub mod functions;
 pub mod msgbox;
+pub mod util;
 pub mod version;
 pub mod volume;
 
@@ -20,11 +22,12 @@ use tokio::fs;
 use tokio::sync::{mpsc, oneshot};
 use ulid::Ulid;
 
+use self::functions::volume_change;
+use self::util::event::TauriEventEmitter;
 use self::version::GIT_TAG;
 use self::volume::volume;
 
 enum Event {
-    VolumeWarning { is_full: bool },
     Project { project: Project },
     Dispatches { dispatches: Vec<DispatchedPlay> },
     DispatchCurrent { current: DispatchedCurrent },
@@ -330,17 +333,15 @@ async fn main() {
     let (event_tx_original, mut event_rx) = mpsc::channel(32);
     let (project_tx, mut project_rx) = mpsc::channel(32);
 
+    let (event_emitter, listen) = TauriEventEmitter::new();
+
     let app = tauri::Builder::default()
         .setup(|app| {
             let app_handle = app.handle();
+            listen(app_handle.clone());
             tokio::spawn(async move {
                 while let Some(event) = event_rx.recv().await {
                     match event {
-                        Event::VolumeWarning { is_full } => {
-                            app_handle
-                                .emit_all("volume_warning", VolumeWarningPayload { is_full })
-                                .expect("failed to emit event");
-                        }
                         Event::Project { project } => {
                             app_handle
                                 .emit_all("project", project)
@@ -382,28 +383,7 @@ async fn main() {
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
 
-    if let Some(mut rx) = volume::receive_volume_change().await {
-        let event_tx = event_tx_original.clone();
-        tokio::spawn(async move {
-            let mut last_is_full = false;
-            loop {
-                let volume = *rx.borrow_and_update();
-                let now_is_full = volume >= 0.995;
-                if now_is_full != last_is_full {
-                    event_tx
-                        .send(Event::VolumeWarning {
-                            is_full: now_is_full,
-                        })
-                        .await
-                        .unwrap();
-                    last_is_full = now_is_full;
-                }
-                if rx.changed().await.is_err() {
-                    break;
-                }
-            }
-        });
-    }
+    volume_change::initialize(event_emitter).await;
 
     let event_tx = event_tx_original.clone();
     tokio::spawn(async move {
