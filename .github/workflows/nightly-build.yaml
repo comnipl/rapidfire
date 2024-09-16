@@ -121,4 +121,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: portable-build-${{ matrix.platform }}-${{ steps.slugify.outputs.sha }}
-          path: src-tauri/target/release/rapidfire.exe
+          path: |
+            src-tauri/target/release/rapidfire.exe
+            src-tauri/target/release/rapidfire.d
+            src-tauri/target/release/rapidfire.pdb
+
