@@ -598,7 +598,11 @@ async fn dispatch_play_spawn(
         let default_config = device.default_output_config().unwrap();
 
         let buffer_size = match default_config.buffer_size() {
-            SupportedBufferSize::Range { min: _, max } => cpal::BufferSize::Fixed(4096.min(*max)),
+            SupportedBufferSize::Range { min, max } => {
+                let buffer = cpal::BufferSize::Fixed(4096.min(*max));
+                msgbox::msgbox(&format!("min = {}, max = {}, set = {:?}", min, max, buffer));
+                buffer
+            }
             SupportedBufferSize::Unknown => cpal::BufferSize::Default,
         };
 
