@@ -18,7 +18,7 @@ jobs:
           - runner: 'macos-latest'
             args: '--target aarch64-apple-darwin'
             platform: 'macos-aarch64'
-          - runner: 'windows-latest'
+          - runner: 'windows-github-lg'
             args: ''
             platform: 'windows'
           - runner: 'ubuntu-latest'
