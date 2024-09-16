@@ -3,11 +3,12 @@ import { Header } from "./components/header";
 import { NowPlay } from "./components/nowplay";
 import { SideBar } from "./components/sidebar";
 import { Footer } from "./components/footer";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card } from "./components/card";
 import { AudioPlayType } from "./lib/type";
 import { invoke } from "@tauri-apps/api";
-import { listen } from "@tauri-apps/api/event";
+import { useListenState } from "./lib/useListenState";
+import { mockProject } from "./lib/mocks";
 
 export type Project = {
   display_name: string,
@@ -32,10 +33,16 @@ export type SoundInstance = {
 
 function App() {
 
-  const [project, setProject] = useState<Project>({
-    display_name: "Loading...",
-    scenes: [],
-  });
+  const project = useListenState<Project, Project>(
+    "project",
+    useCallback(async (value) => value, []),
+    {
+      display_name: "Loading...",
+      scenes: [],
+    },
+    useCallback(async () => invoke<Project>("get_project"), []),
+    mockProject,
+  );
 
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
 
@@ -56,21 +63,6 @@ function App() {
 
 
   const sounds = project.scenes.find(scene => scene.id === selectedSceneId)?.sounds || [];
-
-  useEffect(() => {
-    
-    invoke<Project>("get_project").then((response) =>
-      setProject(response)
-    );
-
-    const unlisten = listen<Project>("project", (event) => {
-      setProject(event.payload);
-    });
-
-    return () => {
-      unlisten.then(f => f());
-    };
-  }, []);
 
   return (
     <div className="flex h-dvh flex-col">

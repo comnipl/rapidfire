@@ -40,7 +40,7 @@ export function Card({
 
   return (
     <div role="button" tabIndex={0} onClick={pushAction}
-      className="w-64 p-4 h-fit gap-4 shadow-xl flex flex-col justify-between rounded-lg shadow-sm border border-slate-200 hover:bg-slate-50"
+      className="w-64 p-4 h-fit gap-4 flex flex-col justify-between rounded-lg shadow border border-slate-200 hover:bg-slate-50"
     >
       <h2 className="text-lg font-semibold text-center">{title}</h2>
       <div className={cn("mx-auto w-fit p-4 bg-slate-300 rounded-full text-white", getAccentColor(type))}>
