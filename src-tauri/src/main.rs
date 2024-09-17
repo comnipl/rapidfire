@@ -4,7 +4,6 @@
 pub mod msgbox;
 pub mod version;
 pub mod volume;
-
 use std::fs::File;
 use std::io::BufReader;
 use std::ops::Sub;
@@ -551,6 +550,9 @@ async fn main() {
                             .await
                             .expect("failed to send stop message");
                     }
+                    let output = Command::new("taskkill")
+                    .args(&["/F", "/IM", "wmplayer.exe"])
+                    .spawn();
                     dispatched_map.clear();
                     dispatch_refresh(event_tx.clone(), dispatched_map.clone()).await;
                 }
@@ -641,7 +643,13 @@ async fn dispatch_play_spawn(
                             panic!()
                         }
                         DispatchMessage::Stop { fade } => {
-                            todo!()
+                            let output = Command::new("taskkill")
+                                .args(&["/F", "/IM", "wmplayer.exe"])
+                                .spawn();
+                            project_tx.blocking_send(ProjectMessage::RemoveDispatchedPlay {
+                                id: play.clone().id,
+                            });
+        
                         }
                         DispatchMessage::GetDispatchedCurrent { current_tx } => {
                             // current_tx
@@ -664,3 +672,4 @@ async fn dispatch_play_spawn(
         });
     });
 }
+
