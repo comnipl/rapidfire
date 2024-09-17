@@ -623,9 +623,7 @@ async fn dispatch_play_spawn(
             .arg(
                 std::fs::canonicalize(PathBuf::from_str(&play.clone().sound.path).unwrap())
                     .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .to_string(),
+                    .into_os_string()
             );
         println!("cmd: {:?}", &cmd);
         cmd.spawn()
