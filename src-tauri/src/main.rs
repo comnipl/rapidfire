@@ -609,16 +609,11 @@ async fn dispatch_play_spawn(
             })
             .unwrap();
 
-        DispatchedCurrent {
-            id: play.clone().id,
-            phase: DispatchPhase::Playing,
-            pos: 0.0,
-        }
-        .emit(&event_tx);
 
         let mut cmd = Command::new("cmd");
         cmd.arg("/C")
             .arg("start")
+            .arg("/MIN")
             .arg("wmplayer")
             .arg(
                 std::fs::canonicalize(PathBuf::from_str(&play.clone().sound.path).unwrap())
@@ -628,6 +623,13 @@ async fn dispatch_play_spawn(
         println!("cmd: {:?}", &cmd);
         cmd.spawn()
             .expect("failed to spawn wmplayer");
+
+        DispatchedCurrent {
+            id: play.clone().id,
+            phase: DispatchPhase::Playing,
+            pos: 0.0,
+        }
+        .emit(&event_tx);
 
         thread::scope(|s| {
             s.spawn(|| {
