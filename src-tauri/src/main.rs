@@ -18,8 +18,8 @@ use rodio::cpal::traits::HostTrait;
 use rodio::cpal::{StreamConfig, SupportedBufferSize};
 use rodio::{cpal, Decoder, DeviceTrait, OutputStream, Sink, Source};
 use serde::{Deserialize, Serialize};
-use std::fs;
 use tauri::Manager;
+use tokio::fs;
 use tokio::sync::{mpsc, oneshot};
 use ulid::Ulid;
 
@@ -619,9 +619,9 @@ async fn dispatch_play_spawn(
         Command::new("cmd")
             .arg("/C")
             .arg("start")
-            .arg("wmplayer")
+            .arg("\"C:\\Program Files (x86)\\Windows Media Player\\wmplayer.exe\"")
             .arg(
-                fs::canonicalize(PathBuf::from_str(&play.clone().sound.path).unwrap())
+                std::fs::canonicalize(PathBuf::from_str(&play.clone().sound.path).unwrap())
                     .unwrap()
                     .to_str()
                     .unwrap()
