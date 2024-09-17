@@ -3,7 +3,9 @@ use windows::Win32::UI::WindowsAndMessaging::{FindWindowA, ShowWindow, SW_MINIMI
 
  pub fn wmmin() {
     // Windows Media Player ウィンドウを探す
-    let hwnd: HWND = unsafe { FindWindowA("WMPlayerApp".into(), None) };
+    let Ok(hwnd) = (unsafe { FindWindowA("WMPlayerApp".into(), None) }) else {
+        return;
+    };
 
     if hwnd.0 != 0 {
         // ウィンドウを最小化
