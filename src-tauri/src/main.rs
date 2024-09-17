@@ -616,8 +616,8 @@ async fn dispatch_play_spawn(
         }
         .emit(&event_tx);
 
-        Command::new("cmd")
-            .arg("/C")
+        let mut cmd = Command::new("cmd");
+        cmd.arg("/C")
             .arg("start")
             .arg("wmplayer")
             .arg(
@@ -626,8 +626,9 @@ async fn dispatch_play_spawn(
                     .to_str()
                     .unwrap()
                     .to_string(),
-            )
-            .spawn()
+            );
+        println!("cmd: {:?}", &cmd);
+        cmd.spawn()
             .expect("failed to spawn wmplayer");
 
         thread::scope(|s| {
