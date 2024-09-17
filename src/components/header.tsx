@@ -1,8 +1,8 @@
-import { LucideCircleOff } from "lucide-react";
-import { useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { LucideCircleOff, LucideTriangleAlert } from "lucide-react";
+import { useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { invoke } from "@tauri-apps/api";
+import { useListenState } from "@/lib/useListenState";
 
 type HeaderProps = {
   title: string;
@@ -13,35 +13,32 @@ type VolumeWarningPayload = {
 };
 
 export function Header({ title }: HeaderProps) {
-  const [isVolumeFull, setIsVolumeFull] = useState(true);
 
-  useEffect(() => {
-    invoke<VolumeWarningPayload>("get_volume_warning").then((response) =>
-      setIsVolumeFull(response.is_full)
-    );
-
-    const unlisten = listen<VolumeWarningPayload>("volume_warning", (event) => {
-      setIsVolumeFull(event.payload.is_full);
-    });
-
-    return () => {
-      unlisten.then((f) => f());
-    };
-  }, []);
+  const isVolumeFull = useListenState<VolumeWarningPayload, boolean>(
+    "volume_warning",
+    useCallback(async (payload) => payload.is_full, []),
+    true,
+    useCallback(async () => {
+      const response = await invoke<VolumeWarningPayload>("get_volume_warning");
+      return response.is_full;
+    }, []),
+    false,
+  );
 
   return (
     <header className="flex justify-between h-fit w-full py-2 px-6 items-center">
       <h1 className="text-2xl font-bold">{title}</h1>
-      <div className="flex gap-4">
+      <div className="flex gap-4 items-center">
         <div
           className={cn(
-            "bg-yellow-200 p-6 text-2xl font-bold",
+            "bg-yellow-200 text-yellow-800 px-4 py-2 text-base font-bold flex items-center justify-center rounded shadow-lg shadow-yellow-200/50",
             isVolumeFull && "hidden"
           )}
         >
-          音量が100%ではありません
+          <LucideTriangleAlert className="h-5 mr-1" />
+          <p className="m-0">音量が100%ではありません</p>
         </div>
-        <button className="aspect-square p-4 bg-red-700" onClick={() => {
+        <button className="aspect-square p-4 bg-red-700 rounded" onClick={() => {
           invoke("panic_button");
         }}>
           <LucideCircleOff className="text-white h-6 w-6" />
