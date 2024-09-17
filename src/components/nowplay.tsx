@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { LucidePause, LucidePlay, LucideSquare, LucideTriangleRight } from "lucide-react";
+import { LucideSquare } from "lucide-react";
 import { Slider } from "./ui/slider";
 import {
   getAccentColor,
