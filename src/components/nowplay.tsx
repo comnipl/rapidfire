@@ -80,7 +80,6 @@ const DispatchedItem = ({ item }: { item: DispatchedPlay }) => {
   const [seek, setSeek] = useState<number | null>(null);
 
   const seekedPos = seek === null ? pos : seek / 100 * item.total_duration;
-  const sliderDisabled = current.phase === "loading";
 
   return (
     <div
@@ -99,31 +98,18 @@ const DispatchedItem = ({ item }: { item: DispatchedPlay }) => {
             onValueCommit={v => {
               invoke("seek_dispatched_play", { id: item.id, pos: v[0] / 100 * item.total_duration });
             }}
-            thumb={!sliderDisabled}
-            disabled={sliderDisabled}
+            thumb={false}
+            disabled={true}
             value={[
-              seek === null ? progress * 100 : seek,
+              progress * 100,
           ]} />
       </div>
       <span>{current.phase === "loading" ? "-:--" : formatTime(seekedPos)} / {formatTime(item.total_duration)}</span>
       <div className="flex gap-2">
-        <button className={cn("p-2", current.phase === "loading" && "invisible")} onClick={() => {
-            invoke("pause_dispatched_play", { id: item.id, paused: current.phase === "playing" });
-            }}>
-          {
-            current.phase === "playing" ? 
-              <LucidePause className="h-6 w-6" /> : <LucidePlay className="h-6 w-6" />
-          }
-        </button>
         <button className="p-2" onClick={() => {
            invoke("stop_dispatched_play", { id: item.id, fade: false });
         }}>
           <LucideSquare className="h-6 w-6 fill-black" />
-        </button>
-        <button className="p-2" onClick={() => {
-            invoke("stop_dispatched_play", { id: item.id, fade: true });
-            }}>
-          <LucideTriangleRight className="h-6 w-6 hue-rotate-90 -scale-x-100" />
         </button>
       </div>
     </div>
