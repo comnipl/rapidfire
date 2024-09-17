@@ -8,6 +8,9 @@ pub mod volume;
 use std::fs::File;
 use std::io::BufReader;
 use std::ops::Sub;
+use std::path::PathBuf;
+use std::process::Command;
+use std::str::FromStr;
 use std::thread::{self, sleep};
 use std::time::Duration;
 
@@ -15,8 +18,8 @@ use rodio::cpal::traits::HostTrait;
 use rodio::cpal::{StreamConfig, SupportedBufferSize};
 use rodio::{cpal, Decoder, DeviceTrait, OutputStream, Sink, Source};
 use serde::{Deserialize, Serialize};
+use std::fs;
 use tauri::Manager;
-use tokio::fs;
 use tokio::sync::{mpsc, oneshot};
 use ulid::Ulid;
 
@@ -594,27 +597,6 @@ async fn dispatch_play_spawn(
         let file = BufReader::new(File::open(play.clone().sound.path).unwrap());
         let source = Decoder::new(file).unwrap();
 
-        let device = cpal::default_host().default_output_device().unwrap();
-        let default_config = device.default_output_config().unwrap();
-
-        let buffer_size = match default_config.buffer_size() {
-            SupportedBufferSize::Range { min, max } => {
-                cpal::BufferSize::Fixed(4096.min(*max).max(*min))
-            }
-            SupportedBufferSize::Unknown => cpal::BufferSize::Default,
-        };
-
-        let config = StreamConfig {
-            channels: default_config.channels(),
-            sample_rate: default_config.sample_rate(),
-            buffer_size,
-        };
-
-        let (_stream, stream_handle) =
-            OutputStream::try_from_config(&device, &config, &default_config.sample_format())
-                .unwrap();
-
-        let sink = Sink::try_new(&stream_handle).unwrap();
         play.total_duration = source
             .total_duration()
             .map(|d| d.as_secs_f64())
@@ -634,98 +616,48 @@ async fn dispatch_play_spawn(
         }
         .emit(&event_tx);
 
+        Command::new("cmd")
+            .arg("/C")
+            .arg("start")
+            .arg("wmplayer")
+            .arg(
+                fs::canonicalize(PathBuf::from_str(&play.clone().sound.path).unwrap())
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            )
+            .spawn()
+            .expect("failed to spawn wmplayer");
+
         thread::scope(|s| {
-            sink.append(source);
-            sink.set_volume(play.sound.volume as f32 / 100.0);
             s.spawn(|| {
                 #[allow(clippy::never_loop)]
                 while let Some(message) = receiver.blocking_recv() {
                     match message {
-                        DispatchMessage::VolumeChange { volume } => {
-                            sink.set_volume(volume);
-                        }
+                        DispatchMessage::VolumeChange { volume } => {}
                         DispatchMessage::Pause { paused } => {
-                            if paused {
-                                sink.pause();
-                                DispatchedCurrent {
-                                    id: play.clone().id,
-                                    phase: DispatchPhase::Paused,
-                                    pos: sink.get_pos().as_secs_f64() * 1000.0,
-                                }
-                                .emit(&event_tx);
-                            } else {
-                                sink.play();
-                                DispatchedCurrent {
-                                    id: play.clone().id,
-                                    phase: DispatchPhase::Playing,
-                                    pos: sink.get_pos().as_secs_f64() * 1000.0,
-                                }
-                                .emit(&event_tx);
-                            }
+                            panic!()
                         }
                         DispatchMessage::Stop { fade } => {
-                            if fade {
-                                for _ in 0..100 {
-                                    sink.set_volume(sink.volume().sub(0.01).max(0.0));
-                                    thread::sleep(std::time::Duration::from_millis(10));
-                                }
-                            }
-                            sink.stop();
-                            break;
+                            todo!()
                         }
                         DispatchMessage::GetDispatchedCurrent { current_tx } => {
-                            current_tx
-                                .send(DispatchedCurrent {
-                                    id: play.clone().id,
-                                    phase: match sink.is_paused() {
-                                        true => DispatchPhase::Paused,
-                                        false => DispatchPhase::Playing,
-                                    },
-                                    pos: sink.get_pos().as_secs_f64() * 1000.0,
-                                })
-                                .unwrap();
+                            // current_tx
+                            //     .send(DispatchedCurrent {
+                            //         id: play.clone().id,
+                            //         phase: match sink.is_paused() {
+                            //             true => DispatchPhase::Paused,
+                            //             false => DispatchPhase::Playing,
+                            //         },
+                            //         pos: sink.get_pos().as_secs_f64() * 1000.0,
+                            //     })
+                            //     .unwrap();
                         }
                         DispatchMessage::Seek { pos } => {
-                            let duration = std::time::Duration::from_millis(pos.floor() as u64);
-                            let _ = sink.try_seek(duration);
-                            DispatchedCurrent {
-                                id: play.clone().id,
-                                phase: match sink.is_paused() {
-                                    true => DispatchPhase::Paused,
-                                    false => DispatchPhase::Playing,
-                                },
-                                pos: sink.get_pos().as_secs_f64() * 1000.0,
-                            }
-                            .emit(&event_tx);
+                            panic!()
                         }
                     }
-                }
-            });
-            s.spawn(|| {
-                loop {
-                    sink.sleep_until_end();
-                    if sink.empty() {
-                        break;
-                    }
-                }
-                let _ = project_tx.blocking_send(ProjectMessage::RemoveDispatchedPlay {
-                    id: play.clone().id,
-                });
-            });
-            s.spawn(|| loop {
-                let file = BufReader::new(File::open(play.clone().sound.path).unwrap());
-                let source = Decoder::new(file).unwrap();
-                sleep(source.total_duration().unwrap_or(Duration::from_secs(1)) / 2);
-                if 5 > sink.len() && sink.len() > 0 && play.sound.looped {
-                    sink.append(source);
-                    DispatchedCurrent {
-                        id: play.clone().id,
-                        phase: DispatchPhase::Playing,
-                        pos: 0.0,
-                    }
-                    .emit(&event_tx);
-                } else {
-                    break;
                 }
             });
         });
