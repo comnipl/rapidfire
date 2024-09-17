@@ -4,6 +4,7 @@
 pub mod msgbox;
 pub mod version;
 pub mod volume;
+pub mod wmmin;
 use std::fs::File;
 use std::io::BufReader;
 use std::ops::Sub;
@@ -21,6 +22,7 @@ use tauri::Manager;
 use tokio::fs;
 use tokio::sync::{mpsc, oneshot};
 use ulid::Ulid;
+use wmmin::wmmin;
 
 use self::version::GIT_TAG;
 use self::volume::volume;
@@ -623,6 +625,9 @@ async fn dispatch_play_spawn(
         println!("cmd: {:?}", &cmd);
         cmd.spawn()
             .expect("failed to spawn wmplayer");
+
+        thread::sleep(Duration::from_secs(2));
+        wmmin();
 
         DispatchedCurrent {
             id: play.clone().id,
