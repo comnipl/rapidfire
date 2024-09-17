@@ -618,7 +618,8 @@ async fn dispatch_play_spawn(
 
         Command::new("cmd")
             .arg("/C")
-            .arg("C:\\Program\\ Files\\ (x86)\\Windows Media Player\\wmplayer.exe")
+            .arg("start")
+            .arg("wmplayer")
             .arg(
                 std::fs::canonicalize(PathBuf::from_str(&play.clone().sound.path).unwrap())
                     .unwrap()
