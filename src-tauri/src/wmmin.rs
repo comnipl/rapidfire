@@ -7,7 +7,7 @@ use windows::Win32::UI::WindowsAndMessaging::{FindWindowA, ShowWindow, SW_MINIMI
         return;
     };
 
-    if hwnd.0 != 0 {
+    if hwnd.0 != std::ptr::null_mut()  {
         // ウィンドウを最小化
         unsafe {
             ShowWindow(hwnd, SW_MINIMIZE);
