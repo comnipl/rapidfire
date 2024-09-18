@@ -331,6 +331,7 @@ async fn main() {
     let (project_tx, mut project_rx) = mpsc::channel(32);
 
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             let app_handle = app.handle();
             tokio::spawn(async move {
