@@ -15,7 +15,7 @@ use rodio::cpal::traits::HostTrait;
 use rodio::cpal::{StreamConfig, SupportedBufferSize};
 use rodio::{cpal, Decoder, DeviceTrait, OutputStream, Sink, Source};
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+use tauri::Emitter;
 use tokio::fs;
 use tokio::sync::{mpsc, oneshot};
 use ulid::Ulid;
