@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import { LucideMusic, LucidePen } from "lucide-react";
 import { Dispatch, SetStateAction } from "react";
 

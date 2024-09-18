@@ -8,7 +8,7 @@ import {
 } from "@/lib/colortype";
 import { SoundInstance } from "@/App";
 import { useCallback, useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import { usePerformanceCounter } from "@/lib/usePerformanceCounter";
 import { useListen } from "@/lib/useListen";
 import { useListenState } from "@/lib/useListenState";

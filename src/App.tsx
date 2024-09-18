@@ -6,9 +6,9 @@ import { Footer } from "./components/footer";
 import { useCallback, useEffect, useState } from "react";
 import { Card } from "./components/card";
 import { AudioPlayType } from "./lib/type";
-import { invoke } from "@tauri-apps/api";
 import { useListenState } from "./lib/useListenState";
 import { mockProject } from "./lib/mocks";
+import { invoke } from "@tauri-apps/api/core";
 
 export type Project = {
   display_name: string,
