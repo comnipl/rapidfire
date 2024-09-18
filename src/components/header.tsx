@@ -1,7 +1,7 @@
 import { LucideCircleOff, LucideTriangleAlert } from "lucide-react";
 import { useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 import { useListenState } from "@/lib/useListenState";
 
 type HeaderProps = {

@@ -4,7 +4,7 @@ import { getAccentColor, getAudioTypeIcon } from "@/lib/colortype";
 import { AudioPlayType } from "@/lib/type";
 import { LucideRepeat } from "lucide-react";
 import { Dispatch, SetStateAction, useCallback } from "react";
-import { invoke } from "@tauri-apps/api";
+import { invoke } from "@tauri-apps/api/core";
 
 export type CardType = {
   id: string;
