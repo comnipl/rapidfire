@@ -339,22 +339,22 @@ async fn main() {
                     match event {
                         Event::VolumeWarning { is_full } => {
                             app_handle
-                                .emit_all("volume_warning", VolumeWarningPayload { is_full })
+                                .emit("volume_warning", VolumeWarningPayload { is_full })
                                 .expect("failed to emit event");
                         }
                         Event::Project { project } => {
                             app_handle
-                                .emit_all("project", project)
+                                .emit("project", project)
                                 .expect("failed to emit event");
                         }
                         Event::Dispatches { dispatches } => {
                             app_handle
-                                .emit_all("dispatches", dispatches)
+                                .emit("dispatches", dispatches)
                                 .expect("failed to emit event");
                         }
                         Event::DispatchCurrent { current } => {
                             app_handle
-                                .emit_all("dispatch_current", current)
+                                .emit("dispatch_current", current)
                                 .expect("failed to emit event");
                         }
                     }
