@@ -333,7 +333,7 @@ async fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            let app_handle = app.handle();
+            let app_handle = app.handle().clone();
             tokio::spawn(async move {
                 while let Some(event) = event_rx.recv().await {
                     match event {
