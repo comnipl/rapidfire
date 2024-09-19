@@ -25,6 +25,10 @@ jobs:
             args: ''
             platform: 'ubuntu'
 
+    defaults:
+      run:
+        working-directory: rapidfire
+
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
