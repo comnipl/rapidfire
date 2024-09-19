@@ -3,38 +3,6 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "tauri": "tauri",
-    "cross-compile:windows": "tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc"
-  },
-  "dependencies": {
-    "@kuma-ui/core": "^1.5.8",
-    "@kuma-ui/vite": "^1.3.2",
-    "@radix-ui/react-slider": "^1.2.0",
-    "@tauri-apps/api": "2.0.0-rc.5",
-    "@tauri-apps/plugin-shell": "^2.0.0-rc",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.438.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "tailwind-merge": "^2.5.2",
-    "tailwindcss-animate": "^1.0.7",
-    "vite-tsconfig-paths": "^5.0.1"
-  },
-  "devDependencies": {
-    "@tauri-apps/cli": "2.0.0-rc.16",
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
-    "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.45",
-    "tailwindcss": "^3.4.10",
-    "typescript": "^5.2.2",
-    "vite": "^5.3.1"
-  },
+  "scripts": { },
   "packageManager": "pnpm@9.9.0+sha512.60c18acd138bff695d339be6ad13f7e936eea6745660d4cc4a776d5247c540d0edee1a563695c183a66eb917ef88f2b4feb1fc25f32a7adcadc7aaf3438e99c1"
 }

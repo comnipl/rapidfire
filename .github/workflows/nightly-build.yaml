@@ -25,6 +25,10 @@ jobs:
             args: ''
             platform: 'ubuntu'
 
+    defaults:
+      run:
+        working-directory: rapidfire
+
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -47,13 +51,13 @@ jobs:
         with:
           run_install: false
 
-      - name: setup node
+      - name: Setup node
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
           cache: 'pnpm' # Set this to npm, yarn or pnpm.
 
-      - name: install Rust stable
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
@@ -62,7 +66,7 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: './rapidfire/src-tauri -> target'
           prefix-key: v0-rust-${{ matrix.platform }}
 
       - name: install frontend dependencies
@@ -75,6 +79,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: ${{ matrix.args }}
+          projectPath: rapidfire
 
       - name: Install jq
         if: matrix.platform != 'windows'
@@ -123,7 +128,7 @@ jobs:
         with:
           name: portable-build-${{ matrix.platform }}-${{ steps.slugify.outputs.sha }}
           path: |
-            src-tauri/target/release/rapidfire.exe
-            src-tauri/target/release/rapidfire.d
-            src-tauri/target/release/rapidfire.pdb
+            rapidfire/src-tauri/target/release/rapidfire.exe
+            rapidfire/src-tauri/target/release/rapidfire.d
+            rapidfire/src-tauri/target/release/rapidfire.pdb
 
