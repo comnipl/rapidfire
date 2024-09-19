@@ -45,6 +45,7 @@ jobs:
             }
 
             console.log(`Found ${allCaches.length} caches in total.`);
+            console.log(allCaches);
 
             const cachesByKey = allCaches.reduce((acc, cache) => {
               (acc[cache.key] = acc[cache.key] || []).push(cache);
