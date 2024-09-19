@@ -1,14 +1,14 @@
-name: Cache Cleanup
+name: cache cleanup
 
 on:
   schedule:
-    - cron: '0 15 * * *'
+    - cron: '0 15 * * *'  # Every day at 0:00 JST (which is 15:00 UTC)
   workflow_dispatch:
     inputs:
-      dry-run:
+      dryrun:
+        type: boolean
         description: 'Perform a dry run without deleting caches'
-        required: false
-        default: 'false'
+        default: true
 
 permissions:
   actions: write
@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Delete old caches
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -27,12 +27,37 @@ jobs:
             let page = 1;
             let allCaches = [];
 
+            const getType = key => {
+              if (key.startsWith('v0-rust')) return key.split('-').slice(0, -2).join('-');
+              if (key.startsWith('node-cache')) return key.split('-').slice(0, -1).join('-');
+              return key;
+            };
+
+            const isBranchExists = async branchName => {
+              try {
+                await github.rest.repos.getBranch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  branch: branchName,
+                });
+                return true;
+              } catch (error) {
+                if (error.status === 404) {
+                  return false;
+                } else {
+                  throw error;
+                }
+              }
+            };
+
+            const getBranchNameFromRef = ref => ref.split('/').slice(2).join('/');
+
             while (page <= maxPages) {
               const response = await github.rest.actions.getActionsCacheList({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 per_page: perPage,
-                page: page,
+                page,
               });
 
               allCaches = allCaches.concat(response.data.actions_caches);
@@ -46,18 +71,32 @@ jobs:
             console.log(`Found ${allCaches.length} caches in total.`);
 
             const cachesByKey = allCaches.reduce((acc, cache) => {
-              (acc[cache.key] = acc[cache.key] || []).push(cache);
+              const i = `${cache.ref}-${getType(cache.key)}`;
+              (acc[i] = acc[i] || []).push(cache);
               return acc;
             }, {});
 
-            const dryRunInput = github.event.inputs && github.event.inputs['dry-run'];
-            const dryRun = dryRunInput === 'true';
+            let dryRun = false;
+            if (context.eventName === 'workflow_dispatch' && context.payload.inputs) {
+              dryRun = context.payload.inputs.dryrun === 'true';
+            }
 
             for (const [key, caches] of Object.entries(cachesByKey)) {
               caches.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-              for (let i = 1; i < caches.length; i++) {
+              for (let i = 0; i < caches.length; i++) {
                 const cacheId = caches[i].id;
+                const key = caches[i].key;
+                const ref = caches[i].ref;
+                const branch = getBranchNameFromRef(ref);
+                if (i === 0) {
+                  if (ref === 'refs/heads/main') continue;
+                  if (await isBranchExists(branch)) {
+                    continue;
+                  } else {
+                    console.log(`Branch ${branch} is no longer exists. deleting...`);
+                  }
+                }
                 if (dryRun) {
                   console.log(`[Dry Run] Old cache for key "${key}" (ID: ${cacheId}) would be deleted.`);
                 } else {
