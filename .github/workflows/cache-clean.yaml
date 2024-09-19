@@ -1,14 +1,14 @@
-name: Cache Cleanup
+name: cache cleanup
 
 on:
   schedule:
-    - cron: '0 15 * * *'
+    - cron: '0 15 * * *'  # Every day at 0:00 JST (which is 15:00 UTC)
   workflow_dispatch:
     inputs:
-      dry-run:
+      dryrun:
+        type: boolean
         description: 'Perform a dry run without deleting caches'
-        required: false
-        default: 'false'
+        default: true
 
 permissions:
   actions: write
@@ -50,8 +50,10 @@ jobs:
               return acc;
             }, {});
 
-            const dryRunInput = github.event.inputs && github.event.inputs['dry-run'];
-            const dryRun = dryRunInput === 'true';
+            let dryRun = false;
+            if (github.context.eventName === 'workflow_dispatch' && github.event.inputs) {
+              dryRun = github.event.inputs.dryrun;
+            }
 
             for (const [key, caches] of Object.entries(cachesByKey)) {
               caches.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
