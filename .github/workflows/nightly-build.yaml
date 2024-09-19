@@ -79,6 +79,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: ${{ matrix.args }}
+          projectPath: rapidfire
 
       - name: Install jq
         if: matrix.platform != 'windows'
