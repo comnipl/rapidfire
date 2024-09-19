@@ -68,10 +68,11 @@ jobs:
 
               for (let i = 1; i < caches.length; i++) {
                 const cacheId = caches[i].id;
+                const key = caches[i].key;
                 if (dryRun) {
-                  console.log(`[Dry Run] Old cache for key "${caches.key}" (ID: ${cacheId}) would be deleted.`);
+                  console.log(`[Dry Run] Old cache for key "${key}" (ID: ${cacheId}) would be deleted.`);
                 } else {
-                  console.log(`Deleting old cache for key "${caches.key}" (ID: ${cacheId}).`);
+                  console.log(`Deleting old cache for key "${key}" (ID: ${cacheId}).`);
                   await github.rest.actions.deleteActionsCacheById({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
