@@ -32,7 +32,8 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 per_page: perPage,
-                page: page,
+                page,
+                ref: 'refs/heads/main',
               });
 
               allCaches = allCaches.concat(response.data.actions_caches);
@@ -51,8 +52,8 @@ jobs:
             }, {});
 
             let dryRun = false;
-            if (github.context.eventName === 'workflow_dispatch' && github.event.inputs) {
-              dryRun = github.event.inputs.dryrun;
+            if (context.eventName === 'workflow_dispatch' && context.payload.inputs) {
+              dryRun = context.payload.inputs.dryrun;
             }
 
             for (const [key, caches] of Object.entries(cachesByKey)) {
