@@ -1,0 +1,72 @@
+name: Cache Cleanup
+
+on:
+  schedule:
+    - cron: '0 15 * * *'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Perform a dry run without deleting caches'
+        required: false
+        default: 'false'
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old caches
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const perPage = 100;
+            const maxPages = 10;
+            let page = 1;
+            let allCaches = [];
+
+            while (page <= maxPages) {
+              const response = await github.rest.actions.getActionsCacheList({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: perPage,
+                page: page,
+              });
+
+              allCaches = allCaches.concat(response.data.actions_caches);
+
+              if (response.data.actions_caches.length < perPage) {
+                break;
+              }
+              page++;
+            }
+
+            console.log(`Found ${allCaches.length} caches in total.`);
+
+            const cachesByKey = allCaches.reduce((acc, cache) => {
+              (acc[cache.key] = acc[cache.key] || []).push(cache);
+              return acc;
+            }, {});
+
+            const dryRunInput = github.event.inputs && github.event.inputs['dry-run'];
+            const dryRun = dryRunInput === 'true';
+
+            for (const [key, caches] of Object.entries(cachesByKey)) {
+              caches.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+              for (let i = 1; i < caches.length; i++) {
+                const cacheId = caches[i].id;
+                if (dryRun) {
+                  console.log(`[Dry Run] Old cache for key "${key}" (ID: ${cacheId}) would be deleted.`);
+                } else {
+                  console.log(`Deleting old cache for key "${key}" (ID: ${cacheId}).`);
+                  await github.rest.actions.deleteActionsCacheById({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    cache_id: cacheId,
+                  });
+                }
+              }
+            }
