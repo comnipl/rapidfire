@@ -51,14 +51,13 @@ jobs:
         with:
           run_install: false
 
-      - name: setup node
+      - name: Setup node
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache-dependency-path: ./rapidfire/pnpm-lock.yaml
           cache: 'pnpm' # Set this to npm, yarn or pnpm.
 
-      - name: install Rust stable
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
