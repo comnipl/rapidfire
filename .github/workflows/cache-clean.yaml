@@ -51,7 +51,6 @@ jobs:
             }
 
             console.log(`Found ${allCaches.length} caches in total.`);
-            console.log(allCaches);
 
             const cachesByKey = allCaches.reduce((acc, cache) => {
               const type = getType(cache.key);
@@ -70,9 +69,9 @@ jobs:
               for (let i = 1; i < caches.length; i++) {
                 const cacheId = caches[i].id;
                 if (dryRun) {
-                  console.log(`[Dry Run] Old cache for key "${key}" (ID: ${cacheId}) would be deleted.`);
+                  console.log(`[Dry Run] Old cache for key "${caches.key}" (ID: ${cacheId}) would be deleted.`);
                 } else {
-                  console.log(`Deleting old cache for key "${key}" (ID: ${cacheId}).`);
+                  console.log(`Deleting old cache for key "${caches.key}" (ID: ${cacheId}).`);
                   await github.rest.actions.deleteActionsCacheById({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
