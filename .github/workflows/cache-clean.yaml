@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Delete old caches
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -26,6 +26,12 @@ jobs:
             const maxPages = 10;
             let page = 1;
             let allCaches = [];
+
+            const getType = key => {
+              if (key.startsWith('v0-rust')) return key.split('-').slice(0, -2).join('-');
+              if (key.startsWith('node-cache')) return key.split('-').slice(0, -1).join('-');
+              return key;
+            };
 
             while (page <= maxPages) {
               const response = await github.rest.actions.getActionsCacheList({
@@ -48,7 +54,8 @@ jobs:
             console.log(allCaches);
 
             const cachesByKey = allCaches.reduce((acc, cache) => {
-              (acc[cache.key] = acc[cache.key] || []).push(cache);
+              const type = getType(cache.key);
+              (acc[type] = acc[type] || []).push(cache);
               return acc;
             }, {});
 
