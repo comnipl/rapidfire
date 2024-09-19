@@ -33,13 +33,31 @@ jobs:
               return key;
             };
 
+            const isBranchExists = async branchName => {
+              try {
+                await github.rest.repos.getBranch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  branch: branchName,
+                });
+                return true;
+              } catch (error) {
+                if (error.status === 404) {
+                  return false;
+                } else {
+                  throw error;
+                }
+              }
+            };
+
+            const getBranchNameFromRef = ref => ref.split('/').slice(2).join('/');
+
             while (page <= maxPages) {
               const response = await github.rest.actions.getActionsCacheList({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 per_page: perPage,
                 page,
-                ref: 'refs/heads/main',
               });
 
               allCaches = allCaches.concat(response.data.actions_caches);
@@ -53,22 +71,32 @@ jobs:
             console.log(`Found ${allCaches.length} caches in total.`);
 
             const cachesByKey = allCaches.reduce((acc, cache) => {
-              const type = getType(cache.key);
-              (acc[type] = acc[type] || []).push(cache);
+              const i = `${ref}-getType(cache.key)`;
+              (acc[i] = acc[i] || []).push(cache);
               return acc;
             }, {});
 
             let dryRun = false;
             if (context.eventName === 'workflow_dispatch' && context.payload.inputs) {
-              dryRun = context.payload.inputs.dryrun;
+              dryRun = context.payload.inputs.dryrun === 'true';
             }
 
             for (const [key, caches] of Object.entries(cachesByKey)) {
               caches.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-              for (let i = 1; i < caches.length; i++) {
+              for (let i = 0; i < caches.length; i++) {
                 const cacheId = caches[i].id;
                 const key = caches[i].key;
+                const ref = caches[i].ref;
+                const branch = getBranchNameFromRef(ref);
+                if (i === 0) {
+                  if (ref === 'refs/heads/main') continue;
+                  if (await isBranchExists(branch)) {
+                    continue;
+                  } else {
+                    console.log(`Branch ${branch} is no longer exists. deleting...`);
+                  }
+                }
                 if (dryRun) {
                   console.log(`[Dry Run] Old cache for key "${key}" (ID: ${cacheId}) would be deleted.`);
                 } else {
