@@ -2,7 +2,10 @@ name: cache cleanup
 
 on:
   schedule:
-    - cron: '0 15 * * *'  # Every day at 0:00 JST (which is 15:00 UTC)
+    - cron: 0 0 * * *
+  pull_request:
+    types:
+      - closed
   workflow_dispatch:
     inputs:
       dryrun:
