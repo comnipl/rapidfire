@@ -15,6 +15,6 @@
 
 ## License
 - Source Code
-  - [Licensed under MIT License](./LICENSE)
+  - Licensed under [MIT License](./LICENSE)
 - Rapidfire Logo
-  - [Licensed under CC BY-NC-ND 4.0](./LICENSE-BRAND)
+  - Licensed under [CC BY-NC-ND 4.0](./LICENSE-BRAND)
