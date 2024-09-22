@@ -66,6 +66,14 @@ jobs:
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.5
 
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './rapidfire/src-tauri -> target'
+          prefix-key: v0-rust-registry-${{ matrix.platform }}
+          cache-targets: false
+
+
       - name: install frontend dependencies
         # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
         run: pnpm install # change this to npm or pnpm depending on which one you use.
