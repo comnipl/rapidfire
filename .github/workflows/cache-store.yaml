@@ -9,6 +9,13 @@ on:
 jobs:
   fetch:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - runner: 'windows-latest'
+            registry-cache-type: windows
+          - runner: 'ubuntu-latest'
+            registry-cache-type: unix
     steps:
       - uses: actions/checkout@v4
 
@@ -20,10 +27,10 @@ jobs:
         with:
           path: |
             ~/.cargo/registry/cache
-          key: cargo-registry-v0-${{ hashFiles('rapidfire/src-tauri/Cargo.lock') }}
+          key: cargo-registry-v0-${{ matrix.registry-cache-type }}-${{ hashFiles('rapidfire/src-tauri/Cargo.lock') }}
           enableCrossOsArchive: true
           restore-keys: |
-            cargo-registry-v0
+            cargo-registry-v0-${{ matrix.registry-cache-type }}
 
       - name: Cargo fetch
         working-directory: rapidfire/src-tauri

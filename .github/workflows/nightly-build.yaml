@@ -18,12 +18,15 @@ jobs:
           - runner: 'macos-latest'
             args: '--target aarch64-apple-darwin'
             platform: 'macos-aarch64'
+            registry-cache-type: unix
           - runner: 'windows-latest'
             args: ''
             platform: 'windows'
+            registry-cache-type: windows
           - runner: 'ubuntu-latest'
             args: ''
             platform: 'ubuntu'
+            registry-cache-type: unix
 
     defaults:
       run:
@@ -65,15 +68,15 @@ jobs:
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.5
 
-      - name: Restore Cargo Registry Cache
+      - name: Cargo Registry Cache
         uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry/cache
-          key: cargo-registry-v0-${{ hashFiles('**/lockfiles') }}
+          key: cargo-registry-v0-${{ matrix.registry-cache-type }}-${{ hashFiles('rapidfire/src-tauri/Cargo.lock') }}
           enableCrossOsArchive: true
-          restore-keys: | 
-            cargo-registry-v0
+          restore-keys: |
+            cargo-registry-v0-${{ matrix.registry-cache-type }}
 
       - name: install frontend dependencies
         # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
