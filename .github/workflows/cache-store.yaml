@@ -20,9 +20,9 @@ jobs:
         with:
           path: |
             ~/.cargo/registry/cache
-          key: cargo-registry-v0-${{ github.head_ref }}-${{ hashFiles('rapidfire/src-tauri/Cargo.lock') }}
+          key: cargo-registry-v0-${{ hashFiles('rapidfire/src-tauri/Cargo.lock') }}
+          enableCrossOsArchive: true
           restore-keys: |
-            cargo-registry-v0-${{ github.head_ref }}
             cargo-registry-v0
 
       - name: Cargo fetch

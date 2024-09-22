@@ -70,9 +70,9 @@ jobs:
         with:
           path: |
             ~/.cargo/registry/cache
-          key: cargo-registry-v0-${{ github.head_ref }}-${{ hashFiles('**/lockfiles') }}
+          key: cargo-registry-v0-${{ hashFiles('**/lockfiles') }}
+          enableCrossOsArchive: true
           restore-keys: | 
-            cargo-registry-v0-${{ github.head_ref }}
             cargo-registry-v0
 
       - name: install frontend dependencies
