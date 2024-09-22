@@ -33,7 +33,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-
       - name: Run slugify
         id: slugify
         uses: eltimn/slugify-action@v2.0.1

@@ -7,9 +7,11 @@ on:
       - rapidfire/src-tauri/Cargo.lock
 
 jobs:
-  cleanup:
+  fetch:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
@@ -18,7 +20,7 @@ jobs:
         with:
           path: |
             ~/.cargo/registry/cache
-          key: cargo-registry-v0-${{ github.head_ref }}-${{ hashFiles('**/lockfiles') }}
+          key: cargo-registry-v0-${{ github.head_ref }}-${{ hashFiles('rapidfire/src-tauri/Cargo.lock') }}
           restore-keys: |
             cargo-registry-v0-${{ github.head_ref }}
             cargo-registry-v0
