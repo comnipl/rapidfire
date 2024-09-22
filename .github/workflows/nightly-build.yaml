@@ -86,10 +86,6 @@ jobs:
           args: ${{ matrix.args }}
           projectPath: rapidfire
 
-      - name: Run sccache stat for check
-        shell: bash
-        run: ${SCCACHE_PATH} --show-stats
-
       - name: Install jq
         if: matrix.platform != 'windows'
         uses: dcarbone/install-jq-action@v2.1.0
