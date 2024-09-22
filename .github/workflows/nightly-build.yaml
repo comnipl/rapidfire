@@ -80,7 +80,7 @@ jobs:
           SCCACHE_BUCKET: sccache
           SCCACHE_REGION: auto
           AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SCERET_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
           SCCACHE_S3_KEY_PREFIX: rapidfire-${{ matrix.platform }}/
         with:
           args: ${{ matrix.args }}
