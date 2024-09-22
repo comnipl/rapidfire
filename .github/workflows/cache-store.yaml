@@ -8,7 +8,6 @@ on:
 
 jobs:
   fetch:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
@@ -16,6 +15,7 @@ jobs:
             registry-cache-type: windows
           - runner: 'ubuntu-latest'
             registry-cache-type: unix
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
