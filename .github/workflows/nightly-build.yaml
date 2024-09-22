@@ -66,13 +66,15 @@ jobs:
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.5
 
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
+      - name: Restore Cargo Registry Cache
+        uses: actions/cache/restore@v4
         with:
-          workspaces: './rapidfire/src-tauri -> target'
-          prefix-key: v0-rust-registry-${{ matrix.platform }}
-          cache-targets: false
-
+          path: |
+            ~/.cargo/registry/cache
+          key: cargo-registry-v0-${{ github.head_ref }}-${{ hashFiles('**/lockfiles') }}
+          restore-keys: | 
+            cargo-registry-v0-${{ github.head_ref }}
+            cargo-registry-v0
 
       - name: install frontend dependencies
         # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
