@@ -18,12 +18,15 @@ jobs:
           - runner: 'macos-latest'
             args: '--target aarch64-apple-darwin'
             platform: 'macos-aarch64'
+            registry-cache-type: unix
           - runner: 'windows-latest'
             args: ''
             platform: 'windows'
+            registry-cache-type: windows
           - runner: 'ubuntu-latest'
             args: ''
             platform: 'ubuntu'
+            registry-cache-type: unix
 
     defaults:
       run:
@@ -32,7 +35,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
-
 
       - name: Run slugify
         id: slugify
@@ -63,11 +65,18 @@ jobs:
           # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
           targets: ${{ matrix.runner == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.5
+
+      - name: Cargo Registry Cache
+        uses: actions/cache/restore@v4
         with:
-          workspaces: './rapidfire/src-tauri -> target'
-          prefix-key: v0-rust-${{ matrix.platform }}
+          path: |
+            ~/.cargo/registry/cache
+          key: cargo-registry-v0-${{ matrix.registry-cache-type }}-${{ hashFiles('rapidfire/src-tauri/Cargo.lock') }}
+          enableCrossOsArchive: true
+          restore-keys: |
+            cargo-registry-v0-${{ matrix.registry-cache-type }}
 
       - name: install frontend dependencies
         # If you don't have `beforeBuildCommand` configured you may want to build your frontend here too.
@@ -77,6 +86,14 @@ jobs:
         id: tauri_build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SCCACHE_GHA_ENABLED: "true"
+          RUSTC_WRAPPER: "sccache"
+          SCCACHE_ENDPOINT: ${{ secrets.SCCACHE_ENDPOINT }}
+          SCCACHE_BUCKET: sccache
+          SCCACHE_REGION: auto
+          AWS_ACCESS_KEY_ID: ${{ secrets.SCCACHE_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SCCACHE_AWS_SECRET_ACCESS_KEY }}
+          SCCACHE_S3_KEY_PREFIX: rapidfire-${{ matrix.platform }}/
         with:
           args: ${{ matrix.args }}
           projectPath: rapidfire

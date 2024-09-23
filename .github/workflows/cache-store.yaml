@@ -1,0 +1,37 @@
+name: cache store
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - rapidfire/src-tauri/Cargo.lock
+
+jobs:
+  fetch:
+    strategy:
+      matrix:
+        include:
+          - runner: 'windows-latest'
+            registry-cache-type: windows
+          - runner: 'ubuntu-latest'
+            registry-cache-type: unix
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo Registry Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/cache
+          key: cargo-registry-v0-${{ matrix.registry-cache-type }}-${{ hashFiles('rapidfire/src-tauri/Cargo.lock') }}
+          enableCrossOsArchive: true
+          restore-keys: |
+            cargo-registry-v0-${{ matrix.registry-cache-type }}
+
+      - name: Cargo fetch
+        working-directory: rapidfire/src-tauri
+        run: cargo fetch
